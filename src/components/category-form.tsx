@@ -57,7 +57,7 @@ export function CategoryForm() {
         </Button>
       </div>
 
-      {state?.error ? <p className="text-[13px] text-red">{state.error}</p> : null}
+      {state?.error ? <p className="text-[13px] text-neg">{state.error}</p> : null}
     </form>
   );
 }

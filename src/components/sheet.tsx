@@ -103,7 +103,7 @@ export function Sheet({
           className="sticky top-0 z-10 cursor-grab touch-none active:cursor-grabbing"
         >
           <div className="material-thick flex flex-col items-center rounded-t-[28px] pt-2.5">
-            <span className="h-1 w-9 rounded-full bg-label-3" />
+            <span className="h-1 w-9 rounded-full bg-ink-3" />
             <div className="flex w-full items-center px-4 pb-3 pt-2.5">
               <div className="flex min-w-16 justify-start">{leading}</div>
               <h2 className="title flex-1 text-center text-[17px] font-semibold">
@@ -112,7 +112,7 @@ export function Sheet({
               <div className="flex min-w-16 justify-end">
                 <button
                   onClick={onClose}
-                  className="pressable text-[15px] text-label-2"
+                  className="pressable text-[15px] text-ink-2"
                 >
                   Cancelar
                 </button>

@@ -5,6 +5,33 @@
  */
 import { neon } from "@neondatabase/serverless";
 import { readFileSync } from "node:fs";
+import { randomBytes, scrypt as scryptCb } from "node:crypto";
+import { promisify } from "node:util";
+
+const scrypt = promisify(scryptCb);
+const DEMO_EMAIL = "demo@fin.app";
+const DEMO_SENHA = "demo1234";
+
+/** Mesma lista de src/lib/default-categories.ts, que o app usa em contas novas. */
+const seedCategories = [
+  ["Salário", "income", "#34C759"],
+  ["Freela / Extra", "income", "#30D158"],
+  ["Moradia", "expense", "#FF9500"],
+  ["Mercado", "expense", "#FF375F"],
+  ["Transporte", "expense", "#5E5CE6"],
+  ["Saúde", "expense", "#FF2D55"],
+  ["Lazer", "expense", "#BF5AF2"],
+  ["Assinaturas", "expense", "#0A84FF"],
+  ["Educação", "expense", "#64D2FF"],
+  ["Outros", "expense", "#8E8E93"],
+];
+
+/** Mesmo formato de src/lib/auth.ts: "salt hex : hash hex". */
+async function hashPassword(plain) {
+  const salt = randomBytes(16);
+  const key = await scrypt(plain.normalize("NFKC"), salt, 64);
+  return `${salt.toString("hex")}:${key.toString("hex")}`;
+}
 
 for (const file of [".env.local", ".env"]) {
   try {
@@ -32,21 +59,44 @@ function day(offset, d) {
   return month(offset).slice(0, 8) + pad(d);
 }
 
-await sql`delete from transactions`;
-await sql`delete from recurrences`;
+// Tudo aqui pertence ao usuário de demonstração; contas reais não são tocadas.
+const [existente] = await sql`select id from users where email = ${DEMO_EMAIL}`;
 
 if (clear) {
-  await sql`update settings set opening_balance_cents = 0, variable_override_cents = null where id = 1`;
-  console.log("\n✓ Banco limpo.\n");
+  // ON DELETE CASCADE leva junto sessões, categorias, lançamentos e fixos.
+  if (existente) await sql`delete from users where id = ${existente.id}`;
+  console.log("\n✓ Conta de demonstração removida.\n");
   process.exit(0);
 }
 
-const cats = await sql`select id, name from categories`;
+let userId = existente?.id;
+if (userId) {
+  await sql`delete from transactions where user_id = ${userId}`;
+  await sql`delete from recurrences where user_id = ${userId}`;
+} else {
+  const [novo] = await sql`
+    insert into users (email, password_hash)
+    values (${DEMO_EMAIL}, ${await hashPassword(DEMO_SENHA)})
+    returning id`;
+  userId = novo.id;
+  for (const [name, kind, color] of seedCategories) {
+    await sql`insert into categories (user_id, name, kind, color)
+      values (${userId}, ${name}, ${kind}, ${color})`;
+  }
+}
+
+const cats = await sql`select id, name from categories where user_id = ${userId}`;
 const byName = Object.fromEntries(cats.map((c) => [c.name, c.id]));
 
-await sql`update settings
-  set opening_balance_cents = 320000, opening_date = ${day(0, 1)}, lookback_months = 3
-  where id = 1`;
+await sql`
+  insert into settings (user_id, opening_balance_cents, opening_date, lookback_months, install_prompted)
+  values (${userId}, 320000, ${day(0, 1)}, 3, true)
+  on conflict (user_id) do update set
+    opening_balance_cents = 320000,
+    opening_date = ${day(0, 1)},
+    lookback_months = 3,
+    variable_override_cents = null,
+    install_prompted = true`;
 
 // Fixos que já existem há tempos.
 const recs = [
@@ -61,8 +111,8 @@ const recs = [
 
 for (const [desc, cents, kind, cat, d, start, end] of recs) {
   await sql`insert into recurrences
-    (description, amount_cents, kind, category_id, day_of_month, start_month, end_month)
-    values (${desc}, ${cents}, ${kind}, ${byName[cat] ?? null}, ${d}, ${start}, ${end})`;
+    (user_id, description, amount_cents, kind, category_id, day_of_month, start_month, end_month)
+    values (${userId}, ${desc}, ${cents}, ${kind}, ${byName[cat] ?? null}, ${d}, ${start}, ${end})`;
 }
 
 // Três meses fechados de histórico: os fixos da época + gasto variável.
@@ -82,11 +132,11 @@ for (const offset of [-3, -2, -1]) {
     ["Academia", 9000, "Saúde", 8],
     ...variable,
   ]) {
-    await sql`insert into transactions (date, description, amount_cents, kind, category_id)
-      values (${day(offset, d)}, ${desc}, ${cents}, 'expense', ${byName[cat] ?? null})`;
+    await sql`insert into transactions (user_id, date, description, amount_cents, kind, category_id)
+      values (${userId}, ${day(offset, d)}, ${desc}, ${cents}, 'expense', ${byName[cat] ?? null})`;
   }
-  await sql`insert into transactions (date, description, amount_cents, kind, category_id)
-    values (${day(offset, 5)}, 'Salário', 450000, 'income', ${byName["Salário"] ?? null})`;
+  await sql`insert into transactions (user_id, date, description, amount_cents, kind, category_id)
+    values (${userId}, ${day(offset, 5)}, 'Salário', 450000, 'income', ${byName["Salário"] ?? null})`;
 }
 
 console.log("\n✓ Cenário de exemplo criado.");

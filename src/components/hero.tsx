@@ -7,27 +7,29 @@ import { formatMonthLong, formatMonthShort, type MonthKey } from "@/lib/month";
 type Point = { label: string; long: string; value: number; month: MonthKey | null };
 
 const W = 360;
-const H = 132;
-const PAD = 14;
+const H = 180;
+const PAD = 18;
 
 /**
- * O herói da tela e a assinatura do app: uma linha do tempo que você arrasta.
- * Mover o dedo viaja pelos meses e tudo acompanha junto — o número gigante,
- * o brilho do fundo e o rótulo. A projeção deixa de ser um gráfico pra ler e
- * vira uma coisa pra manusear.
+ * O capítulo "se nada mudar" — e a assinatura do app. Arrastar o dedo pela
+ * linha viaja pelos meses: a frase, o número gigante e o brilho do fundo
+ * recalculam juntos. A projeção deixa de ser um gráfico pra ler e vira uma
+ * coisa pra manusear.
  */
 export function Hero({
   months,
   currentBalance,
   variableMonthly,
+  action,
 }: {
   months: { month: MonthKey; endBalance: number }[];
   currentBalance: number;
   variableMonthly: number;
+  /** Controle do horizonte, ao lado do rótulo do capítulo. */
+  action?: React.ReactNode;
 }) {
   const [index, setIndex] = useState(months.length);
   const [scrubbing, setScrubbing] = useState(false);
-  const [offset, setOffset] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
   const points: Point[] = useMemo(
@@ -43,56 +45,41 @@ export function Hero({
     [months, currentBalance],
   );
 
-  // Se o horizonte mudar, o ponto ativo volta pro fim da linha.
   useEffect(() => setIndex(points.length - 1), [points.length]);
-
-  // Parallax: o brilho de fundo sobe mais devagar que o conteúdo.
-  useEffect(() => {
-    let frame = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setOffset(window.scrollY));
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
 
   const geom = useMemo(() => {
     const values = points.map((p) => p.value);
     const rawMin = Math.min(0, ...values);
     const rawMax = Math.max(0, ...values);
     const span = rawMax - rawMin || 1;
-    const min = rawMin - span * 0.16;
-    const max = rawMax + span * 0.16;
+    const min = rawMin - span * 0.18;
+    const max = rawMax + span * 0.18;
 
+    // Recuo lateral pra bolinha da ponta não encostar na borda do SVG.
+    const INSET = 7;
     const x = (i: number) =>
-      points.length === 1 ? W / 2 : (i / (points.length - 1)) * W;
+      points.length === 1
+        ? W / 2
+        : INSET + (i / (points.length - 1)) * (W - INSET * 2);
     const y = (v: number) => PAD + (1 - (v - min) / (max - min)) * (H - PAD * 2);
 
     const line = points
       .map((p, i) => `${i === 0 ? "M" : "L"}${x(i)} ${y(p.value)}`)
       .join(" ");
-    const zeroY = y(0);
 
-    return { x, y, line, area: `${line} L${W} ${H} L0 ${H} Z`, zeroY };
+    return { x, y, line, area: `${line} L${W} ${H} L0 ${H} Z`, zeroY: y(0) };
   }, [points]);
 
   const active = points[Math.min(index, points.length - 1)];
   const delta = active.value - currentBalance;
+  const hasNegative = points.some((p) => p.value < 0);
 
-  // O brilho do fundo é o termômetro: vermelho no vermelho, laranja no
-  // aperto, verde quando sobra.
   const tone =
     active.value < 0
-      ? "var(--red)"
+      ? "var(--neg)"
       : variableMonthly > 0 && active.value < variableMonthly
-        ? "var(--orange)"
-        : delta >= 0
-          ? "var(--green)"
-          : "var(--blue)";
+        ? "var(--warn)"
+        : "var(--brand)";
 
   function scrubTo(clientX: number) {
     const rect = trackRef.current?.getBoundingClientRect();
@@ -102,55 +89,47 @@ export function Hero({
     setIndex(Math.min(points.length - 1, Math.max(0, next)));
   }
 
-  const hasNegative = points.some((p) => p.value < 0);
-
   return (
-    <section className="relative -mx-4 overflow-hidden px-4 pb-2 pt-6">
-      {/* Brilho de fundo — a única cor forte da tela. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 transition-[background] duration-700"
-        style={{
-          background: `radial-gradient(70% 60% at 50% 12%, color-mix(in oklab, ${tone} 26%, transparent) 0%, transparent 70%)`,
-          transform: `translateY(${offset * 0.35}px)`,
-          opacity: Math.max(0, 1 - offset / 420),
-        }}
-      />
-
-      <div className="flex flex-col items-center gap-1 text-center">
-        <p className="text-[13px] font-medium text-label-2">
-          {active.month ? `Saldo previsto · ${active.long}` : "Saldo hoje"}
-        </p>
-        <p
-          className={`display text-[clamp(44px,13vw,60px)] font-semibold transition-colors duration-300 ${
-            active.value < 0 ? "text-red" : "text-label"
-          }`}
-        >
-          {formatMoney(active.value)}
-        </p>
-        {active.month ? (
-          <span
-            className="tnum rounded-full px-2.5 py-1 text-[13px] font-semibold"
-            style={{
-              color: delta < 0 ? "var(--red)" : "var(--green)",
-              background: `color-mix(in oklab, ${
-                delta < 0 ? "var(--red)" : "var(--green)"
-              } 14%, transparent)`,
-            }}
-          >
-            {delta < 0 ? "−" : "+"}
-            {formatMoney(Math.abs(delta))} desde hoje
-          </span>
-        ) : (
-          <span className="text-[13px] text-label-3">
-            arraste a linha pra viajar no tempo
-          </span>
-        )}
+    <section>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="chapter">Se nada mudar</p>
+        {action}
       </div>
+
+      <p className="title text-[19px] font-medium text-ink-2">
+        {active.month ? `Em ${active.long} você terá` : "Hoje você tem"}
+      </p>
+
+      <p
+        className={`display mt-1.5 text-[clamp(46px,14vw,64px)] font-bold transition-colors duration-300 ${
+          active.value < 0 ? "text-neg" : "text-ink"
+        }`}
+      >
+        {formatMoney(active.value)}
+      </p>
+
+      {active.month ? (
+        <span
+          className="tnum mt-2.5 inline-block rounded-full px-3 py-1 text-[13px] font-bold"
+          style={{
+            color: delta < 0 ? "var(--neg)" : "var(--pos)",
+            background: `color-mix(in oklab, ${
+              delta < 0 ? "var(--neg)" : "var(--pos)"
+            } 13%, transparent)`,
+          }}
+        >
+          {delta < 0 ? "−" : "+"}
+          {formatMoney(Math.abs(delta))} em relação a hoje
+        </span>
+      ) : (
+        <span className="mt-2.5 inline-block text-[13px] text-ink-3">
+          arraste a linha pra viajar no tempo
+        </span>
+      )}
 
       <div
         ref={trackRef}
-        className="relative mt-4 touch-none"
+        className="relative mt-5 cursor-ew-resize touch-none"
         onPointerDown={(e) => {
           setScrubbing(true);
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -162,7 +141,7 @@ export function Hero({
       >
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="h-auto w-full"
+          className="h-auto w-full overflow-visible"
           role="img"
           aria-label={`Saldo projetado: ${formatMoney(currentBalance)} hoje, ${formatMoney(
             points.at(-1)!.value,
@@ -170,13 +149,22 @@ export function Hero({
         >
           <defs>
             <linearGradient id="hero-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={tone} stopOpacity="0.3" />
+              <stop offset="0%" stopColor={tone} stopOpacity="0.42" />
+              <stop offset="55%" stopColor={tone} stopOpacity="0.14" />
               <stop offset="100%" stopColor={tone} stopOpacity="0" />
             </linearGradient>
-            <clipPath id="hero-clip-pos">
+            {/* Um leve brilho na linha, pra ela não parecer um fio solto. */}
+            <filter id="hero-glow" x="-20%" y="-40%" width="140%" height="180%">
+              <feGaussianBlur stdDeviation="4" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <clipPath id="hero-pos">
               <rect x="0" y="0" width={W} height={geom.zeroY} />
             </clipPath>
-            <clipPath id="hero-clip-neg">
+            <clipPath id="hero-neg">
               <rect x="0" y={geom.zeroY} width={W} height={H - geom.zeroY} />
             </clipPath>
           </defs>
@@ -189,7 +177,7 @@ export function Hero({
               y1={geom.zeroY}
               x2={W}
               y2={geom.zeroY}
-              stroke="var(--label-3)"
+              stroke="var(--ink-3)"
               strokeWidth="1"
               strokeDasharray="2 5"
               vectorEffect="non-scaling-stroke"
@@ -199,51 +187,58 @@ export function Hero({
           <path
             d={geom.line}
             fill="none"
-            stroke="var(--blue)"
-            strokeWidth="2.5"
+            stroke="var(--brand)"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            clipPath="url(#hero-clip-pos)"
+            clipPath="url(#hero-pos)"
+            filter="url(#hero-glow)"
             vectorEffect="non-scaling-stroke"
           />
           {hasNegative ? (
             <path
               d={geom.line}
               fill="none"
-              stroke="var(--red)"
+              stroke="var(--neg)"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              clipPath="url(#hero-clip-neg)"
+              clipPath="url(#hero-neg)"
               vectorEffect="non-scaling-stroke"
             />
           ) : null}
 
-          {/* Haste vertical marcando onde o dedo está. */}
-          <line
-            x1={geom.x(index)}
-            y1={geom.y(active.value)}
-            x2={geom.x(index)}
-            y2={H}
-            stroke="var(--label-3)"
-            strokeWidth="1"
-            vectorEffect="non-scaling-stroke"
-          />
+          {/* A haste só existe durante o arrasto. Parada, ela virava um risco
+              solto na borda direita do gráfico. */}
+          {scrubbing ? (
+            <line
+              x1={geom.x(index)}
+              y1={geom.y(active.value)}
+              x2={geom.x(index)}
+              y2={H}
+              stroke="var(--ink-3)"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : null}
           <circle
             cx={geom.x(index)}
             cy={geom.y(active.value)}
-            r={scrubbing ? 7 : 5}
-            fill={active.value < 0 ? "var(--red)" : "var(--blue)"}
+            r={scrubbing ? 7.5 : 5.5}
+            fill={active.value < 0 ? "var(--neg)" : "var(--brand)"}
             stroke="var(--bg)"
             strokeWidth="3"
             style={{ transition: "r 0.2s var(--ease-spring)" }}
           />
         </svg>
 
-        {/* Trilho de meses: os extremos ancoram, o ativo acompanha o dedo. */}
-        <div className="mt-1 flex justify-between px-0.5 text-[11px] font-medium text-label-3">
+        {/* O rótulo do meio só aparece quando o ponto ativo não é uma das
+            pontas — senão o mesmo mês apareceria duas vezes na régua. */}
+        <div className="mt-2 flex justify-between text-[11px] font-semibold text-ink-3">
           <span>hoje</span>
-          <span className="text-label-2">{active.label}</span>
+          <span className="text-ink-2">
+            {index > 0 && index < points.length - 1 ? active.label : ""}
+          </span>
           <span>{points.at(-1)!.label}</span>
         </div>
       </div>

@@ -23,8 +23,8 @@ export function Segmented<T extends string>({
           aria-pressed={opt.value === value}
           className={`flex-1 rounded-[8px] px-3 py-1.5 text-[14px] font-medium transition-all ${
             opt.value === value
-              ? "material-thick text-label shadow-[var(--shadow-1)]"
-              : "text-label-2 active:opacity-60"
+              ? "material-thick text-ink shadow-[var(--shadow-1)]"
+              : "text-ink-2 active:opacity-60"
           }`}
         >
           {opt.label}

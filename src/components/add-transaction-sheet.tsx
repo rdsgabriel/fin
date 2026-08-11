@@ -65,7 +65,7 @@ export function AddTransactionSheet({
         step === 2 ? (
           <button
             onClick={() => setStep(1)}
-            className="pressable text-[15px] text-blue"
+            className="pressable text-[15px] text-brand"
           >
             Voltar
           </button>
@@ -94,7 +94,7 @@ export function AddTransactionSheet({
             <button
               onClick={() => setStep(2)}
               disabled={cents === 0}
-              className="pressable w-full rounded-[14px] bg-blue py-3.5 text-[17px] font-semibold text-white disabled:opacity-30"
+              className="pressable w-full rounded-[14px] bg-brand py-3.5 text-[17px] font-semibold text-white disabled:opacity-30"
             >
               Continuar
             </button>
@@ -111,12 +111,12 @@ export function AddTransactionSheet({
             onClick={() => setStep(1)}
             className="flex w-full flex-col items-center gap-0.5 py-5"
           >
-            <span className="text-[13px] text-label-2">
+            <span className="text-[13px] text-ink-2">
               {kind === "income" ? "Entrada" : "Saída"}
             </span>
             <span
               className={`display text-[38px] font-semibold ${
-                kind === "income" ? "text-green" : "text-label"
+                kind === "income" ? "text-pos" : "text-ink"
               }`}
             >
               {formatMoney(cents)}
@@ -127,7 +127,7 @@ export function AddTransactionSheet({
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="tx-desc"
-                className="text-[13px] font-medium text-label-2"
+                className="text-[13px] font-medium text-ink-2"
               >
                 No que foi?
               </label>
@@ -139,12 +139,12 @@ export function AddTransactionSheet({
                 autoFocus
                 autoComplete="off"
                 placeholder={kind === "expense" ? "Mercado da esquina" : "Salário"}
-                className="w-full rounded-[12px] bg-fill px-3.5 py-3 text-[17px] text-label outline-none placeholder:text-label-3 focus:ring-2 focus:ring-blue/50"
+                className="w-full rounded-[12px] bg-fill px-3.5 py-3 text-[17px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-brand/40"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-medium text-label-2">
+              <span className="text-[13px] font-medium text-ink-2">
                 Categoria
               </span>
               <CategoryChips
@@ -156,7 +156,7 @@ export function AddTransactionSheet({
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-medium text-label-2">Quando</span>
+              <span className="text-[13px] font-medium text-ink-2">Quando</span>
               <div className="flex gap-2">
                 {[
                   { value: today, label: "Hoje" },
@@ -168,8 +168,8 @@ export function AddTransactionSheet({
                     onClick={() => setDate(opt.value)}
                     className={`pressable rounded-full px-4 py-2 text-[14px] font-medium ${
                       date === opt.value
-                        ? "bg-blue text-white"
-                        : "bg-fill text-label"
+                        ? "bg-brand text-white"
+                        : "bg-fill text-ink"
                     }`}
                   >
                     {opt.label}
@@ -180,19 +180,19 @@ export function AddTransactionSheet({
                   value={date}
                   onChange={(e) => setDate(e.target.value || today)}
                   aria-label="Outra data"
-                  className="flex-1 rounded-full bg-fill px-4 py-2 text-[14px] text-label outline-none"
+                  className="flex-1 rounded-full bg-fill px-4 py-2 text-[14px] text-ink outline-none"
                 />
               </div>
             </div>
 
             {state?.error ? (
-              <p className="text-[13px] text-red">{state.error}</p>
+              <p className="text-[13px] text-neg">{state.error}</p>
             ) : null}
 
             <button
               type="submit"
               disabled={pending}
-              className="pressable w-full rounded-[14px] bg-blue py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
+              className="pressable w-full rounded-[14px] bg-brand py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
             >
               {pending ? "Salvando…" : "Lançar"}
             </button>

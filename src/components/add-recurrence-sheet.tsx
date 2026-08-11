@@ -1,10 +1,16 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { addRecurrence } from "@/app/actions";
-import type { Category } from "@/db/schema";
+import { addRecurrence, updateRecurrence } from "@/app/actions";
+import type { Category, Recurrence } from "@/db/schema";
 import { formatMoney } from "@/lib/money";
-import { addMonths, formatMonthLong, monthKeyOf, todayISO } from "@/lib/month";
+import {
+  addMonths,
+  formatMonthLong,
+  monthKeyOf,
+  monthsBetween,
+  todayISO,
+} from "@/lib/month";
 import { CategoryChips } from "./category-chips";
 import { Keypad } from "./keypad";
 import { Segmented } from "./segmented";
@@ -14,10 +20,13 @@ export function AddRecurrenceSheet({
   open,
   onClose,
   categories,
+  editando,
 }: {
   open: boolean;
   onClose: () => void;
   categories: Category[];
+  /** Quando presente, a folha edita esse fixo em vez de criar um novo. */
+  editando?: Recurrence | null;
 }) {
   const thisMonth = monthKeyOf(todayISO());
 
@@ -29,18 +38,39 @@ export function AddRecurrenceSheet({
   const [dayOfMonth, setDayOfMonth] = useState(5);
   const [startMonth, setStartMonth] = useState(thisMonth);
   const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [state, action, pending] = useActionState(addRecurrence, null);
+  const [state, action, pending] = useActionState(
+    editando ? updateRecurrence : addRecurrence,
+    null,
+  );
 
   useEffect(() => {
-    if (open) {
-      setStep(1);
-      setDigits("");
-      setMode("sempre");
-      setInstallments(12);
-      setCategoryId(null);
-      setStartMonth(thisMonth);
+    if (!open) return;
+
+    if (editando) {
+      // Editando: já abre no passo dos detalhes, com tudo preenchido. O
+      // teclado fica a um toque no valor, se for só reajustar.
+      const fim = editando.endMonth ? monthKeyOf(editando.endMonth) : null;
+      const inicio = monthKeyOf(editando.startMonth);
+      setStep(2);
+      setKind(editando.kind);
+      setDigits(String(editando.amountCents));
+      setMode(fim ? "parcelado" : "sempre");
+      setInstallments(fim ? monthsBetween(inicio, fim) + 1 : 12);
+      setDayOfMonth(editando.dayOfMonth);
+      setStartMonth(inicio);
+      setCategoryId(editando.categoryId);
+      return;
     }
-  }, [open, thisMonth]);
+
+    setStep(1);
+    setKind("expense");
+    setDigits("");
+    setMode("sempre");
+    setInstallments(12);
+    setDayOfMonth(5);
+    setCategoryId(null);
+    setStartMonth(thisMonth);
+  }, [open, thisMonth, editando]);
 
   useEffect(() => {
     if (state?.ok) onClose();
@@ -55,12 +85,14 @@ export function AddRecurrenceSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={step === 1 ? "Novo fixo" : "Como se repete"}
+      title={
+        editando ? "Editar fixo" : step === 1 ? "Novo fixo" : "Como se repete"
+      }
       leading={
-        step === 2 ? (
+        step === 2 && !editando ? (
           <button
             onClick={() => setStep(1)}
-            className="pressable text-[15px] text-blue"
+            className="pressable text-[15px] text-brand"
           >
             Voltar
           </button>
@@ -89,7 +121,7 @@ export function AddRecurrenceSheet({
             <button
               onClick={() => setStep(2)}
               disabled={cents === 0}
-              className="pressable w-full rounded-[14px] bg-blue py-3.5 text-[17px] font-semibold text-white disabled:opacity-30"
+              className="pressable w-full rounded-[14px] bg-brand py-3.5 text-[17px] font-semibold text-white disabled:opacity-30"
             >
               Continuar
             </button>
@@ -97,6 +129,9 @@ export function AddRecurrenceSheet({
         </div>
       ) : (
         <form action={action} className="animate-step-in">
+          {editando ? (
+            <input type="hidden" name="id" value={editando.id} />
+          ) : null}
           <input type="hidden" name="kind" value={kind} />
           <input type="hidden" name="amountCents" value={cents} />
           <input type="hidden" name="mode" value={mode} />
@@ -109,12 +144,12 @@ export function AddRecurrenceSheet({
             onClick={() => setStep(1)}
             className="flex w-full flex-col items-center gap-0.5 py-5"
           >
-            <span className="text-[13px] text-label-2">
+            <span className="text-[13px] text-ink-2">
               {mode === "parcelado" ? "Por parcela" : "Por mês"}
             </span>
             <span
               className={`display text-[38px] font-semibold ${
-                kind === "income" ? "text-green" : "text-label"
+                kind === "income" ? "text-pos" : "text-ink"
               }`}
             >
               {formatMoney(cents)}
@@ -134,7 +169,7 @@ export function AddRecurrenceSheet({
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="rec-desc"
-                className="text-[13px] font-medium text-label-2"
+                className="text-[13px] font-medium text-ink-2"
               >
                 O que é?
               </label>
@@ -143,7 +178,8 @@ export function AddRecurrenceSheet({
                 name="description"
                 required
                 maxLength={80}
-                autoFocus
+                defaultValue={editando?.description ?? ""}
+                autoFocus={!editando}
                 autoComplete="off"
                 placeholder={
                   mode === "parcelado"
@@ -152,13 +188,13 @@ export function AddRecurrenceSheet({
                       ? "Aluguel"
                       : "Salário"
                 }
-                className="w-full rounded-[12px] bg-fill px-3.5 py-3 text-[17px] text-label outline-none placeholder:text-label-3 focus:ring-2 focus:ring-blue/50"
+                className="w-full rounded-[12px] bg-fill px-3.5 py-3 text-[17px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-brand/40"
               />
             </div>
 
             {mode === "parcelado" ? (
               <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-medium text-label-2">
+                <span className="text-[13px] font-medium text-ink-2">
                   Parcelas restantes
                 </span>
                 <div className="no-scrollbar flex gap-2 overflow-x-auto py-1">
@@ -169,8 +205,8 @@ export function AddRecurrenceSheet({
                       onClick={() => setInstallments(n)}
                       className={`pressable size-11 shrink-0 rounded-full text-[15px] font-semibold ${
                         installments === n
-                          ? "bg-blue text-white"
-                          : "bg-fill text-label"
+                          ? "bg-brand text-white"
+                          : "bg-fill text-ink"
                       }`}
                     >
                       {n}x
@@ -178,7 +214,7 @@ export function AddRecurrenceSheet({
                   ))}
                 </div>
                 {lastMonth ? (
-                  <p className="rounded-[12px] bg-green/12 px-3.5 py-3 text-[13px] leading-snug text-green">
+                  <p className="rounded-[12px] bg-pos/12 px-3.5 py-3 text-[13px] leading-snug text-pos">
                     Total de {formatMoney(cents * installments)}. A última cai em{" "}
                     <strong className="font-semibold">
                       {formatMonthLong(lastMonth)}
@@ -192,18 +228,18 @@ export function AddRecurrenceSheet({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-medium text-label-2">
+                <span className="text-[13px] font-medium text-ink-2">
                   {mode === "parcelado" ? "Primeira em" : "Começa em"}
                 </span>
                 <input
                   type="month"
                   value={startMonth}
                   onChange={(e) => setStartMonth(e.target.value || thisMonth)}
-                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-label outline-none"
+                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-ink outline-none"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-medium text-label-2">
+                <span className="text-[13px] font-medium text-ink-2">
                   Dia do mês
                 </span>
                 <input
@@ -212,13 +248,13 @@ export function AddRecurrenceSheet({
                   max={31}
                   value={dayOfMonth}
                   onChange={(e) => setDayOfMonth(Number(e.target.value) || 1)}
-                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-label outline-none"
+                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-ink outline-none"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-medium text-label-2">
+              <span className="text-[13px] font-medium text-ink-2">
                 Categoria
               </span>
               <CategoryChips
@@ -230,15 +266,15 @@ export function AddRecurrenceSheet({
             </div>
 
             {state?.error ? (
-              <p className="text-[13px] text-red">{state.error}</p>
+              <p className="text-[13px] text-neg">{state.error}</p>
             ) : null}
 
             <button
               type="submit"
               disabled={pending}
-              className="pressable w-full rounded-[14px] bg-blue py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
+              className="pressable w-full rounded-[14px] bg-brand py-3.5 text-[17px] font-semibold text-white disabled:opacity-40"
             >
-              {pending ? "Salvando…" : "Adicionar"}
+              {pending ? "Salvando…" : editando ? "Salvar" : "Adicionar"}
             </button>
           </div>
         </form>

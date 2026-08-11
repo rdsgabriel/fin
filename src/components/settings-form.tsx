@@ -66,10 +66,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         </Field>
 
         {state?.error ? (
-          <p className="px-4 pt-3 text-[13px] text-red">{state.error}</p>
+          <p className="px-4 pt-3 text-[13px] text-neg">{state.error}</p>
         ) : null}
         {state?.ok ? (
-          <p className="px-4 pt-3 text-[13px] text-green">Salvo.</p>
+          <p className="px-4 pt-3 text-[13px] text-pos">Salvo.</p>
         ) : null}
 
         <div className="p-4">

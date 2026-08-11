@@ -28,7 +28,7 @@ export function CategoryChips({
             className={`pressable flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-[14px] font-medium transition-colors ${
               selected
                 ? "border-transparent text-white"
-                : "border-separator bg-fill text-label"
+                : "border-hairline bg-fill text-ink"
             }`}
             style={selected ? { background: c.color } : undefined}
           >

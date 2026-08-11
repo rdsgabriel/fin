@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // O selo de dev flutuante fica por cima do dock e polui os screenshots.
+  devIndicators: false,
   async headers() {
     return [
       {

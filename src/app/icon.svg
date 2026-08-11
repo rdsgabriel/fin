@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Favicon: a mesma marca do app. Traço mais grosso que o logo da tela,
+       porque a 16px na aba um traço fino vira poeira. -->
+  <defs>
+    <linearGradient id="g" x1="4" y1="26" x2="28" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6FE0E6"/>
+      <stop offset="0.38" stop-color="#7FA8F7"/>
+      <stop offset="0.72" stop-color="#9E6BF2"/>
+      <stop offset="1" stop-color="#CE8BE4"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#241640"/>
+      <stop offset="1" stop-color="#12091F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- O fundo escuro garante contraste tanto na aba clara quanto na escura. -->
+  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <path d="M6.5 23.5C12 23.5 16.5 20.5 20 12" stroke="url(#g)" stroke-width="4.6" stroke-linecap="round" fill="none"/>
+  <circle cx="23.5" cy="8.5" r="4" fill="url(#g)"/>
+</svg>

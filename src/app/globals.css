@@ -1,90 +1,112 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
-   Materiais e profundidade.
-   A ideia do "vidro": nada é uma cor chapada — tudo é uma camada
-   translúcida sobre a camada de baixo, com blur e uma borda de luz
-   de 1px no topo. É isso que dá a sensação de material físico.
+   Apple dá a precisão: tipografia apertada, materiais translúcidos,
+   molas no movimento. Lovable dá o calor: fundo creme, orbes de
+   gradiente, cantos generosos, e a sensação de que o app gosta de você.
+
+   Paleta validada contra daltonismo (scripts/validate_palette.js):
+   teal↔vermelho tem ΔE 11.6 em deuteranopia — verde↔vermelho tinha 2.7,
+   ou seja, era indistinguível pra ~8% dos homens.
    --------------------------------------------------------------- */
 :root {
-  --bg: #ececed;
-  --bg-deep: #dcdce0;
+  --bg: #faf8f6;
+  --bg-2: #f2eeea;
 
-  /* Superfícies em ordem de elevação. */
-  --mat-thin: rgba(255, 255, 255, 0.62);
-  --mat: rgba(255, 255, 255, 0.78);
-  --mat-thick: rgba(252, 252, 253, 0.92);
-  --mat-border: rgba(255, 255, 255, 0.7);
-  --mat-edge: rgba(0, 0, 0, 0.06);
+  --mat: rgba(255, 255, 255, 0.58);
+  --mat-soft: rgba(255, 255, 255, 0.42);
+  --mat-thick: rgba(255, 255, 255, 0.88);
+  --dock: #ffffff;
+  --mat-edge: rgba(23, 20, 32, 0.06);
+  --mat-sheen: rgba(255, 255, 255, 0.9);
 
-  --label: #000000;
-  --label-2: rgba(60, 60, 67, 0.62);
-  --label-3: rgba(60, 60, 67, 0.32);
-  --separator: rgba(60, 60, 67, 0.12);
-  --fill: rgba(120, 120, 128, 0.12);
-  --fill-strong: rgba(120, 120, 128, 0.2);
+  --ink: #17141f;
+  --ink-2: rgba(23, 20, 32, 0.6);
+  --ink-3: rgba(23, 20, 32, 0.34);
+  --hairline: rgba(23, 20, 32, 0.09);
+  --fill: rgba(23, 20, 32, 0.05);
+  --fill-2: rgba(23, 20, 32, 0.09);
 
-  --blue: #007aff;
-  --green: #34c759;
-  --red: #ff3b30;
-  --orange: #ff9500;
+  --brand: #6e56f8;
+  --brand-soft: rgba(110, 86, 248, 0.12);
+  --pos: #0d9488;
+  --neg: #e5484d;
+  --warn: #d97706;
 
-  --scrim: rgba(0, 0, 0, 0.28);
+  /* Vidro iridescente: ciano → azul → violeta → lilás, com um respiro de
+     pêssego no fim. É a mesma leitura de luz atravessando vidro colorido. */
+  --grad: linear-gradient(
+    135deg,
+    #6fe0e6 0%,
+    #7fa8f7 28%,
+    #9e6bf2 60%,
+    #ce8be4 84%,
+    #f3b98d 100%
+  );
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.05);
-  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.12);
-  --shadow-sheet: 0 -1px 0 var(--mat-border), 0 -12px 48px rgba(0, 0, 0, 0.18);
+  /* Orbes do fundo, tirados das mesmas cores do gradiente. */
+  --orb-1: rgba(111, 224, 230, 0.22);
+  --orb-2: rgba(158, 107, 242, 0.2);
+  --orb-3: rgba(206, 139, 228, 0.18);
+
+  --scrim: rgba(23, 20, 32, 0.32);
+  --shadow-1: 0 1px 2px rgba(23, 20, 32, 0.04), 0 6px 20px rgba(23, 20, 32, 0.06);
+  --shadow-2: 0 4px 12px rgba(23, 20, 32, 0.08), 0 24px 60px rgba(23, 20, 32, 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --bg-deep: #0a0a0c;
+    --bg: #0a090c;
+    --bg-2: #121016;
 
-    --mat-thin: rgba(40, 40, 44, 0.55);
-    --mat: rgba(44, 44, 48, 0.72);
-    --mat-thick: rgba(30, 30, 34, 0.92);
-    --mat-border: rgba(255, 255, 255, 0.1);
-    --mat-edge: rgba(255, 255, 255, 0.06);
+    --mat: rgba(48, 44, 60, 0.5);
+    --mat-soft: rgba(48, 44, 60, 0.32);
+    --mat-thick: rgba(26, 23, 33, 0.9);
+    --dock: #1b1822;
+    --mat-edge: rgba(255, 255, 255, 0.09);
+    --mat-sheen: rgba(255, 255, 255, 0.13);
 
-    --label: #ffffff;
-    --label-2: rgba(235, 235, 245, 0.62);
-    --label-3: rgba(235, 235, 245, 0.3);
-    --separator: rgba(255, 255, 255, 0.08);
-    --fill: rgba(120, 120, 128, 0.26);
-    --fill-strong: rgba(120, 120, 128, 0.4);
+    --ink: #f6f4f8;
+    --ink-2: rgba(246, 244, 248, 0.62);
+    --ink-3: rgba(246, 244, 248, 0.32);
+    --hairline: rgba(255, 255, 255, 0.08);
+    --fill: rgba(255, 255, 255, 0.06);
+    --fill-2: rgba(255, 255, 255, 0.11);
 
-    --blue: #0a84ff;
-    --green: #30d158;
-    --red: #ff453a;
-    --orange: #ff9f0a;
+    --brand: #8b7bff;
+    --brand-soft: rgba(139, 123, 255, 0.16);
+    --pos: #0da08a;
+    --neg: #f2495a;
+    --warn: #f0a227;
 
-    --scrim: rgba(0, 0, 0, 0.5);
+    /* No escuro os orbes viram brilho, então sobem de intensidade. */
+    --orb-1: rgba(90, 214, 226, 0.2);
+    --orb-2: rgba(150, 92, 245, 0.32);
+    --orb-3: rgba(200, 124, 228, 0.2);
 
+    --scrim: rgba(0, 0, 0, 0.6);
     --shadow-1: none;
-    --shadow-2: 0 16px 48px rgba(0, 0, 0, 0.6);
-    --shadow-sheet: 0 -1px 0 var(--mat-border), 0 -12px 48px rgba(0, 0, 0, 0.7);
+    --shadow-2: 0 24px 60px rgba(0, 0, 0, 0.7);
   }
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-bg-deep: var(--bg-deep);
-  --color-label: var(--label);
-  --color-label-2: var(--label-2);
-  --color-label-3: var(--label-3);
-  --color-separator: var(--separator);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-hairline: var(--hairline);
   --color-fill: var(--fill);
-  --color-fill-strong: var(--fill-strong);
-  --color-blue: var(--blue);
-  --color-green: var(--green);
-  --color-red: var(--red);
-  --color-orange: var(--orange);
+  --color-fill-2: var(--fill-2);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-warn: var(--warn);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Inter", "Segoe UI", system-ui, sans-serif;
 
-  /* A curva de mola que a Apple usa em sheets e navegação. */
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -94,148 +116,233 @@ html {
   background: var(--bg);
 }
 
+/* Malha de gradiente do fundo: três orbes de luz que ficam presas à
+   viewport, então a página parece deslizar sobre elas.
+   As camadas vão no próprio `background` do body — um pseudo-elemento com
+   z-index negativo ficaria ATRÁS do fundo do body e nunca apareceria. */
 body {
-  background:
-    radial-gradient(120% 60% at 50% 0%, var(--bg) 0%, var(--bg-deep) 100%)
-    fixed;
-  color: var(--label);
+  min-height: 100dvh;
+  color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(80% 55% at 12% -5%, var(--orb-1) 0%, transparent 62%),
+    radial-gradient(70% 48% at 95% 12%, var(--orb-2) 0%, transparent 60%),
+    radial-gradient(85% 50% at 70% 100%, var(--orb-3) 0%, transparent 62%);
+  background-attachment: fixed, fixed, fixed;
+  background-repeat: no-repeat;
 }
 
-/* --- Materiais reutilizáveis ------------------------------------ */
+/* --- Materiais ---------------------------------------------------- */
 
+/* Vidro de verdade: fundo bem translúcido, blur alto, e um fio de luz de
+   0.5px só na aresta de cima — é esse reflexo que faz o olho ler "placa de
+   vidro" em vez de "retângulo cinza". */
 .material {
   background: var(--mat);
-  backdrop-filter: saturate(180%) blur(24px);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(190%) blur(36px);
+  -webkit-backdrop-filter: saturate(190%) blur(36px);
   border: 0.5px solid var(--mat-edge);
-  box-shadow: var(--shadow-1), inset 0 0.5px 0 var(--mat-border);
+  box-shadow:
+    var(--shadow-1),
+    inset 0 0.5px 0 var(--mat-sheen),
+    inset 0 -0.5px 0 var(--mat-edge);
 }
 
-.material-thin {
-  background: var(--mat-thin);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+/* Painel mais discreto, pra listas de passos e blocos secundários. */
+.glass-panel {
+  background: var(--mat-soft);
+  backdrop-filter: saturate(160%) blur(24px);
+  -webkit-backdrop-filter: saturate(160%) blur(24px);
+  border: 0.5px solid var(--mat-edge);
+  border-radius: 22px;
+  box-shadow: inset 0 0.5px 0 var(--mat-sheen);
+}
+
+/* Campos de formulário como vidro fosco, não como caixa cinza. */
+.glass-field {
+  width: 100%;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--mat-soft);
+  backdrop-filter: saturate(160%) blur(20px);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+  border: 0.5px solid var(--mat-edge);
+  box-shadow: inset 0 0.5px 0 var(--mat-sheen);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-field::placeholder {
+  color: var(--ink-3);
+}
+.glass-field:focus {
+  border-color: color-mix(in oklab, var(--brand) 55%, transparent);
+  box-shadow:
+    inset 0 0.5px 0 var(--mat-sheen),
+    0 0 0 3.5px var(--brand-soft);
+}
+
+.glass-button {
+  background: var(--mat);
+  backdrop-filter: saturate(170%) blur(28px);
+  -webkit-backdrop-filter: saturate(170%) blur(28px);
+  border: 0.5px solid var(--mat-edge);
+  color: var(--ink);
+  box-shadow: var(--shadow-1), inset 0 0.5px 0 var(--mat-sheen);
 }
 
 .material-thick {
   background: var(--mat-thick);
   backdrop-filter: saturate(180%) blur(40px);
   -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border: 0.5px solid var(--mat-edge);
 }
 
-/* --- Tipografia -------------------------------------------------- */
+/* O dock é a única superfície opaca do app. Translúcido, o conteúdo que
+   passa por baixo dele ao rolar fica legível através dos ícones. */
+.dock {
+  background: var(--dock);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border: 0.5px solid var(--mat-edge);
+  box-shadow: var(--shadow-2), inset 0 0.5px 0 var(--mat-sheen);
+}
+
+/* --- Tipografia ---------------------------------------------------- */
 
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* SF Pro Display aperta o tracking conforme o tamanho cresce. */
+/* Números e títulos grandes em peso 300. É o truque da Apple no Wallet e no
+   Saúde: em tamanho grande, o peso leve lê como caro; o negrito lê como
+   aviso de banco. A hierarquia vem do tamanho, não da gordura da letra.
+   `.display` já carrega o peso, então não acompanha `font-bold`. */
 .display {
-  letter-spacing: -0.03em;
+  font-weight: 300;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
-.title {
-  letter-spacing: -0.022em;
+/* Abaixo de ~28px o peso 300 começa a sumir; aí volta pra 400. */
+@media (max-width: 380px) {
+  .display {
+    font-weight: 350;
+  }
 }
 
-/* --- Movimento ---------------------------------------------------- */
+.title {
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.14;
+}
+
+/* Texto com o gradiente da marca. Só em títulos — nunca em número que
+   precisa ser lido com precisão. */
+.brand-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Botão de destaque com o mesmo vidro iridescente. O brilho por cima
+   simula a luz batendo na superfície curva. */
+.grad-button {
+  position: relative;
+  overflow: hidden;
+  background: var(--grad);
+  color: #fff;
+  border: none;
+  box-shadow: var(--shadow-2);
+}
+.grad-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.32) 0%,
+    rgba(255, 255, 255, 0.06) 42%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  pointer-events: none;
+}
+
+/* Rótulo de capítulo: o fio condutor da narrativa da home. */
+.chapter {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* --- Movimento ----------------------------------------------------- */
 
 @keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
-
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
 @keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes step-in {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes draw {
+  from { stroke-dashoffset: var(--len); }
+  to { stroke-dashoffset: 0; }
 }
 
-.animate-sheet-in {
-  animation: sheet-in 0.44s var(--ease-spring);
-}
-.animate-fade-in {
-  animation: fade-in 0.3s var(--ease-out-soft);
-}
-.animate-step-in {
-  animation: step-in 0.36s var(--ease-spring);
-}
+.animate-sheet-in { animation: sheet-in 0.44s var(--ease-spring); }
+.animate-fade-in { animation: fade-in 0.3s var(--ease-out-soft); }
+.animate-step-in { animation: step-in 0.36s var(--ease-spring); }
+.animate-pop-in { animation: pop-in 0.5s var(--ease-spring) backwards; }
+.rise { animation: rise-in 0.55s var(--ease-out-soft) backwards; }
 
-/* Entrada escalonada das seções da tela inicial. */
-.rise {
-  animation: rise-in 0.5s var(--ease-out-soft) backwards;
-}
+/* --- Controles ------------------------------------------------------ */
 
-/* --- Controles --------------------------------------------------- */
-
-button,
-a {
+button, a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Resposta tátil: tudo que é tocável encolhe um pouco. */
 .pressable {
-  transition: transform 0.18s var(--ease-spring), opacity 0.18s ease;
+  transition: transform 0.18s var(--ease-spring), opacity 0.18s ease,
+    background-color 0.18s ease;
 }
 .pressable:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
-input,
-select,
-textarea {
+input, select, textarea {
   font-family: inherit;
-  font-size: 16px; /* abaixo disso o iOS dá zoom no foco */
+  font-size: 16px; /* abaixo disso o iOS dá zoom ao focar */
 }
 
-/* Esconde a barra de rolagem das faixas horizontais de chips. */
-.no-scrollbar {
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

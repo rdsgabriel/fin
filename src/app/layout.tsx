@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Nav } from "@/components/nav";
 import { RegisterSW } from "@/components/register-sw";
-import { getCategories } from "@/lib/queries";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,8 +16,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#faf8f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a090c" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -27,21 +25,24 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // A tab bar carrega os sheets de "adicionar", que precisam das categorias.
-  const categories = await getCategories();
-
   return (
     <html lang="pt-BR">
       <body className="min-h-dvh">
-        <Nav categories={categories} />
-        <main className="mx-auto w-full max-w-2xl px-4 pb-32 pt-2 sm:pb-16 sm:pt-8">
-          {children}
-        </main>
+        {/* O `beforeinstallprompt` dispara cedo, às vezes antes do React
+            montar. Guardamos o evento aqui pra tela de instalação poder
+            usá-lo depois — sem isso o botão "Instalar" não teria como
+            abrir o diálogo nativo. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__finInstall=e;window.dispatchEvent(new Event('fin:installable'))});`,
+          }}
+        />
+        {children}
         <RegisterSW />
       </body>
     </html>

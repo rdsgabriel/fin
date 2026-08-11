@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 
-/** Cartão agrupado, o bloco básico das telas de Ajustes do iOS. */
+/** Cartão de vidro. O bloco de conteúdo padrão. */
 export function Card({
   className = "",
   children,
@@ -8,7 +8,7 @@ export function Card({
 }: ComponentProps<"section">) {
   return (
     <section
-      className={`material overflow-hidden rounded-[20px] ${className}`}
+      className={`material overflow-hidden rounded-[24px] ${className}`}
       {...rest}
     >
       {children}
@@ -16,8 +16,8 @@ export function Card({
   );
 }
 
-/** Cabeçalho de seção: maiúsculas pequenas, discreto, fora do cartão. */
-export function SectionTitle({
+/** Rótulo de capítulo — o fio que costura a narrativa da home. */
+export function Chapter({
   children,
   action,
 }: {
@@ -25,16 +25,13 @@ export function SectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-2 flex items-end justify-between px-1">
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-label-2">
-        {children}
-      </h2>
+    <div className="mb-2.5 flex items-end justify-between gap-3 px-1">
+      <h2 className="chapter">{children}</h2>
       {action}
     </div>
   );
 }
 
-/** Linha de lista com separador que respeita o recuo do conteúdo. */
 export function Row({
   className = "",
   children,
@@ -42,7 +39,7 @@ export function Row({
 }: ComponentProps<"div">) {
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-separator ${className}`}
+      className={`flex items-center gap-3 px-4 py-3.5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-hairline ${className}`}
       {...rest}
     >
       {children}
@@ -54,23 +51,24 @@ export function Button({
   variant = "filled",
   className = "",
   ...rest
-}: ComponentProps<"button"> & { variant?: "filled" | "tinted" | "plain" | "danger" }) {
+}: ComponentProps<"button"> & {
+  variant?: "filled" | "tinted" | "plain" | "danger";
+}) {
   const styles = {
-    filled: "bg-blue text-white active:opacity-80",
-    tinted: "bg-fill text-blue active:bg-fill-strong",
-    plain: "text-blue active:opacity-60",
-    danger: "text-red active:opacity-60",
+    filled: "bg-brand text-white",
+    tinted: "bg-brand-soft text-brand",
+    plain: "text-brand",
+    danger: "text-neg",
   }[variant];
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[12px] px-4 py-2.5 text-[15px] font-semibold transition-all disabled:opacity-40 ${styles} ${className}`}
+      className={`pressable inline-flex items-center justify-center gap-1.5 rounded-full px-5 py-3 text-[15px] font-semibold disabled:opacity-40 ${styles} ${className}`}
       {...rest}
     />
   );
 }
 
-/** Campo com rótulo à esquerda e valor à direita, como nos forms do iOS. */
 export function Field({
   label,
   children,
@@ -81,16 +79,18 @@ export function Field({
   hint?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 px-4 py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-separator">
-      <span className="text-[13px] font-medium text-label-2">{label}</span>
+    <label className="flex flex-col gap-1.5 px-4 py-3.5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-hairline">
+      <span className="text-[13px] font-semibold text-ink-2">{label}</span>
       {children}
-      {hint ? <span className="text-[12px] text-label-3">{hint}</span> : null}
+      {hint ? (
+        <span className="text-[12px] leading-snug text-ink-3">{hint}</span>
+      ) : null}
     </label>
   );
 }
 
 const inputBase =
-  "w-full rounded-[10px] bg-fill px-3 py-2.5 text-[16px] text-label outline-none placeholder:text-label-3 focus:ring-2 focus:ring-blue/50";
+  "w-full rounded-[14px] bg-fill px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-brand/40";
 
 export function Input({ className = "", ...rest }: ComponentProps<"input">) {
   return <input className={`${inputBase} ${className}`} {...rest} />;
@@ -99,17 +99,16 @@ export function Input({ className = "", ...rest }: ComponentProps<"input">) {
 export function Select({ className = "", ...rest }: ComponentProps<"select">) {
   return (
     <select
-      className={`${inputBase} appearance-none bg-[length:12px] bg-[right_0.75rem_center] bg-no-repeat pr-9 ${className}`}
+      className={`${inputBase} appearance-none bg-[length:12px] bg-[right_0.9rem_center] bg-no-repeat pr-10 ${className}`}
       style={{
         backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%238E8E93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%238b8794' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
       }}
       {...rest}
     />
   );
 }
 
-/** Estado vazio: um ícone leve, uma frase, e o caminho pra sair dele. */
 export function Empty({
   title,
   body,
@@ -120,10 +119,10 @@ export function Empty({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-      <p className="text-[16px] font-semibold text-label">{title}</p>
-      <p className="max-w-xs text-[14px] leading-snug text-label-2">{body}</p>
-      {action ? <div className="mt-2">{action}</div> : null}
+    <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+      <p className="title text-[19px] font-semibold">{title}</p>
+      <p className="max-w-xs text-[14px] leading-snug text-ink-2">{body}</p>
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
 }
@@ -136,15 +135,15 @@ export function Badge({
   children: ReactNode;
 }) {
   const styles = {
-    neutral: "bg-fill text-label-2",
-    good: "bg-green/15 text-green",
-    bad: "bg-red/15 text-red",
-    warn: "bg-orange/15 text-orange",
+    neutral: "bg-fill text-ink-2",
+    good: "bg-pos/14 text-pos",
+    bad: "bg-neg/14 text-neg",
+    warn: "bg-warn/16 text-warn",
   }[tone];
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${styles}`}
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${styles}`}
     >
       {children}
     </span>

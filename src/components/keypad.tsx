@@ -36,30 +36,32 @@ export function Keypad({
   return (
     <div className="flex flex-col">
       <div className="flex flex-col items-center gap-1 px-6 py-7">
-        <span className="text-[13px] font-medium text-label-2">
+        <span className="text-[13px] font-medium text-ink-2">
           {tone === "income" ? "Entrada" : "Saída"}
         </span>
         <span
           className={`display text-[52px] font-semibold transition-colors ${
             cents === 0
-              ? "text-label-3"
+              ? "text-ink-3"
               : tone === "income"
-                ? "text-green"
-                : "text-label"
+                ? "text-pos"
+                : "text-ink"
           }`}
         >
           {formatMoney(cents)}
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-px bg-separator">
+      {/* Teclas sem moldura: só o toque acende um círculo. Grade com linhas
+          faria o teclado parecer uma planilha. */}
+      <div className="grid grid-cols-3 gap-1 px-3">
         {KEYS.map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => press(key)}
             aria-label={key === "⌫" ? "Apagar" : key}
-            className="material-thin py-4 text-[26px] font-normal text-label transition-colors active:bg-fill-strong"
+            className="pressable rounded-[18px] py-3.5 text-[27px] font-normal text-ink transition-colors active:bg-fill-2"
           >
             {key}
           </button>
