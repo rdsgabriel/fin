@@ -110,17 +110,32 @@ export async function addRecurrence(
     endMonth = firstDayOf(addMonths(startMonth, count - 1));
   }
 
+  // Antes um dia fora do intervalo virava 1 silenciosamente — a pessoa
+  // salvava "dia 45" e o app passava a projetar o vencimento no dia 1.
   const day = Number(formData.get("dayOfMonth"));
+  if (!Number.isInteger(day) || day < 1 || day > 31) {
+    return { error: "O dia do mês precisa estar entre 1 e 31." };
+  }
+
+  const kind = readKind(formData.get("kind"));
+  const clt = kind === "income" && Boolean(formData.get("thirteenth"));
+  const feriasRaw = Number(formData.get("vacationMonth"));
+  const ferias =
+    clt && Number.isInteger(feriasRaw) && feriasRaw >= 1 && feriasRaw <= 12
+      ? feriasRaw
+      : null;
 
   await db.insert(recurrences).values({
     userId: user.id,
     description,
     amountCents,
-    kind: readKind(formData.get("kind")),
+    kind,
     categoryId: await readCategoryId(formData.get("categoryId"), user.id),
-    dayOfMonth: Number.isInteger(day) && day >= 1 && day <= 31 ? day : 1,
+    dayOfMonth: day,
     startMonth: firstDayOf(startMonth),
     endMonth,
+    thirteenth: clt,
+    vacationMonth: ferias,
   });
 
   revalidateAll();
@@ -158,18 +173,33 @@ export async function updateRecurrence(
     endMonth = firstDayOf(addMonths(startMonth, count - 1));
   }
 
+  // Antes um dia fora do intervalo virava 1 silenciosamente — a pessoa
+  // salvava "dia 45" e o app passava a projetar o vencimento no dia 1.
   const day = Number(formData.get("dayOfMonth"));
+  if (!Number.isInteger(day) || day < 1 || day > 31) {
+    return { error: "O dia do mês precisa estar entre 1 e 31." };
+  }
+
+  const kind = readKind(formData.get("kind"));
+  const clt = kind === "income" && Boolean(formData.get("thirteenth"));
+  const feriasRaw = Number(formData.get("vacationMonth"));
+  const ferias =
+    clt && Number.isInteger(feriasRaw) && feriasRaw >= 1 && feriasRaw <= 12
+      ? feriasRaw
+      : null;
 
   await db
     .update(recurrences)
     .set({
       description,
       amountCents,
-      kind: readKind(formData.get("kind")),
+      kind,
       categoryId: await readCategoryId(formData.get("categoryId"), user.id),
-      dayOfMonth: Number.isInteger(day) && day >= 1 && day <= 31 ? day : 1,
+      dayOfMonth: day,
       startMonth: firstDayOf(startMonth),
       endMonth,
+      thirteenth: clt,
+      vacationMonth: ferias,
     })
     .where(and(eq(recurrences.id, id), eq(recurrences.userId, user.id)));
 
@@ -240,6 +270,16 @@ export async function updateSettings(
   const horizon = Number(formData.get("horizonMonths"));
   const lookback = Number(formData.get("lookbackMonths"));
 
+  const taxa = Number(
+    String(formData.get("yieldAnnual") ?? "")
+      .replace(/[^\d,.]/g, "")
+      .replace(",", "."),
+  );
+  // Teto de 100% a.a.: acima disso é promessa de golpe, não projeção.
+  const yieldBps = Number.isFinite(taxa)
+    ? Math.min(10000, Math.max(0, Math.round(taxa * 100)))
+    : 0;
+
   await db
     .update(settings)
     .set({
@@ -248,6 +288,7 @@ export async function updateSettings(
       variableOverrideCents: overrideRaw ? parseMoneyToCents(overrideRaw) : null,
       horizonMonths: [6, 12, 24, 36].includes(horizon) ? horizon : 12,
       lookbackMonths: lookback >= 1 && lookback <= 12 ? lookback : 3,
+      yieldAnnualBps: yieldBps,
     })
     .where(eq(settings.userId, user.id));
 
@@ -330,7 +371,15 @@ export type OnboardingData = {
     dayOfMonth: number;
     /** Renda que varia: o valor informado é uma média, não um salário fixo. */
     variavel: boolean;
+    /** CLT: 13º em nov/dez. */
+    thirteenth: boolean;
+    /** Mês das férias (1-12), pro adicional de 1/3. */
+    vacationMonth: number | null;
   } | null;
+  /** Rentabilidade anual do dinheiro aplicado, em pontos-base. */
+  yieldAnnualBps: number;
+  /** Quanto pretende separar por mês. Vira a primeira meta, se houver. */
+  guardarMensalCents: number;
   fixed: { description: string; amountCents: number; dayOfMonth: number }[];
   installments: { description: string; amountCents: number; count: number }[];
   /** Gasto de todo mês que não é fixo: mercado, delivery, farmácia. */
@@ -354,6 +403,8 @@ export async function saveOnboarding(data: OnboardingData) {
         data.variableMonthlyCents > 0
           ? Math.round(data.variableMonthlyCents)
           : null,
+      // Teto de 100% a.a.: acima disso é promessa de golpe, não projeção.
+      yieldAnnualBps: Math.min(10000, Math.max(0, Math.round(data.yieldAnnualBps))),
     })
     .where(eq(settings.userId, user.id));
 
@@ -367,6 +418,8 @@ export async function saveOnboarding(data: OnboardingData) {
             dayOfMonth: data.income.dayOfMonth,
             startMonth,
             endMonth: null,
+            thirteenth: data.income.thirteenth,
+            vacationMonth: data.income.vacationMonth,
           },
         ]
       : []),
@@ -391,6 +444,23 @@ export async function saveOnboarding(data: OnboardingData) {
     .map((r) => ({ ...r, userId: user.id }));
 
   if (rows.length) await db.insert(recurrences).values(rows);
+
+  // "Guardar antes" precisa de um destino, senão vira só um número solto.
+  // A reserva de emergência é o primeiro alvo de todo mundo: três meses de
+  // custo de vida, calculados com o que a pessoa acabou de informar.
+  if (data.guardarMensalCents > 0) {
+    const custoMensal =
+      data.fixed.reduce((t, f) => t + f.amountCents, 0) +
+      data.installments.reduce((t, p) => t + p.amountCents, 0) +
+      data.variableMonthlyCents;
+
+    await db.insert(goals).values({
+      userId: user.id,
+      name: "Reserva de emergência",
+      targetCents: Math.max(custoMensal * 3, data.guardarMensalCents * 6),
+      monthlyCents: Math.round(data.guardarMensalCents),
+    });
+  }
 
   revalidateAll();
   return { ok: true };

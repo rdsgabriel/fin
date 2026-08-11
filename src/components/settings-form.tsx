@@ -55,6 +55,22 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           </Select>
         </Field>
 
+        <Field
+          label="Rentabilidade do dinheiro aplicado"
+          hint="% ao ano. Deixe 0 se o dinheiro fica parado na conta. O juro compõe mês a mês na projeção."
+        >
+          <Input
+            name="yieldAnnual"
+            inputMode="decimal"
+            placeholder="0,0"
+            defaultValue={
+              settings.yieldAnnualBps
+                ? String(settings.yieldAnnualBps / 100).replace(".", ",")
+                : ""
+            }
+          />
+        </Field>
+
         <Field label="Horizonte padrão da projeção">
           <Select name="horizonMonths" defaultValue={String(settings.horizonMonths)}>
             {[6, 12, 24, 36].map((n) => (

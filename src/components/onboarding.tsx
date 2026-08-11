@@ -7,6 +7,7 @@ import { buildProjection, buildStory } from "@/lib/projection";
 import { formatMoney } from "@/lib/money";
 import { firstDayOf, formatMonthLong, monthKeyOf, todayISO } from "@/lib/month";
 import type { Recurrence, Settings } from "@/db/schema";
+import { DayField } from "./day-field";
 import { Keypad } from "./keypad";
 
 type FixedItem = { id: number; description: string; digits: string };
@@ -23,7 +24,9 @@ const SUGESTOES = [
   "Streaming",
 ];
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
+
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 
 /**
  * Onboarding conversacional: uma pergunta por tela, do jeito que uma pessoa
@@ -40,11 +43,22 @@ export function Onboarding() {
   const [rendaDigits, setRendaDigits] = useState("");
   const [rendaDia, setRendaDia] = useState(5);
   const [rendaVariavel, setRendaVariavel] = useState(false);
+  const [clt, setClt] = useState(true);
+  const [ferias, setFerias] = useState<number | null>(null);
   const [fixos, setFixos] = useState<FixedItem[]>([]);
   const [parcelas, setParcelas] = useState<Parcela[]>([]);
   const [variavelDigits, setVariavelDigits] = useState("");
+  const [rendeBps, setRendeBps] = useState(0);
+  const [guardarDigits, setGuardarDigits] = useState("");
 
   const cents = (d: string) => Number(d || "0");
+
+  // O que sobraria hoje, pra pergunta de guardar não vir do nada.
+  const sobraEstimada =
+    cents(rendaDigits) -
+    fixos.reduce((t, f) => t + cents(f.digits), 0) -
+    parcelas.reduce((t, p) => t + cents(p.digits), 0) -
+    cents(variavelDigits);
 
   const data: OnboardingData = useMemo(
     () => ({
@@ -55,6 +69,9 @@ export function Onboarding() {
             amountCents: cents(rendaDigits),
             dayOfMonth: rendaVariavel ? 1 : rendaDia,
             variavel: rendaVariavel,
+            // Só faz sentido pra quem tem carteira assinada.
+            thirteenth: !rendaVariavel && clt,
+            vacationMonth: !rendaVariavel && clt ? ferias : null,
           }
         : null,
       fixed: fixos
@@ -72,8 +89,22 @@ export function Onboarding() {
           count: p.count,
         })),
       variableMonthlyCents: cents(variavelDigits),
+      yieldAnnualBps: rendeBps,
+      guardarMensalCents: cents(guardarDigits),
     }),
-    [saldo, rendaDigits, rendaDia, rendaVariavel, fixos, parcelas, variavelDigits],
+    [
+      saldo,
+      rendaDigits,
+      rendaDia,
+      rendaVariavel,
+      clt,
+      ferias,
+      fixos,
+      parcelas,
+      variavelDigits,
+      rendeBps,
+      guardarDigits,
+    ],
   );
 
   function finish() {
@@ -93,6 +124,7 @@ export function Onboarding() {
       onNext={() => setStep(1)}
     >
       <Keypad digits={saldo} onChange={setSaldo} tone="income" />
+      <RendimentoPicker value={rendeBps} onChange={setRendeBps} />
     </Step>,
 
     <Step
@@ -100,7 +132,7 @@ export function Onboarding() {
       pergunta="Quanto entra por mês?"
       ajuda={
         rendaVariavel
-          ? "Some os últimos meses e divida — uma média já serve. Dá pra ajustar depois."
+          ? "Some os últimos meses e divida. Uma média já serve, dá pra ajustar depois."
           : "O valor que cai na conta todo mês. Dá pra ajustar depois."
       }
       podeSeguir={cents(rendaDigits) > 0}
@@ -137,16 +169,60 @@ export function Onboarding() {
             lançando o que entra de verdade, ela fica mais fiel.
           </p>
         ) : (
-          <div className="flex items-center gap-3">
-            <span className="text-[14px] text-ink-2">Cai todo dia</span>
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={rendaDia}
-              onChange={(e) => setRendaDia(Number(e.target.value) || 1)}
-              className="tnum w-16 rounded-full bg-fill px-3 py-1.5 text-center text-[15px] font-semibold text-ink outline-none"
-            />
+          <>
+            {/* CLT recebe ~13,33 salários por ano. Sem essa pergunta a
+                projeção erraria pra menos o ano inteiro. */}
+            <label className="glass-panel flex w-full items-start gap-3 p-4 text-left">
+              <input
+                type="checkbox"
+                checked={clt}
+                onChange={(e) => setClt(e.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]"
+              />
+              <span>
+                <span className="text-[15px] font-medium">Sou CLT</span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-ink-2">
+                  Conta 13º (metade em nov, metade em dez) e o adicional de 1/3
+                  das férias.
+                </span>
+              </span>
+            </label>
+
+            {clt ? (
+              <div className="flex w-full flex-col gap-2">
+                <span className="text-[13px] font-medium text-ink-2">
+                  Em que mês você costuma tirar férias?
+                </span>
+                <div className="no-scrollbar flex gap-1.5 overflow-x-auto py-0.5">
+                  {MESES.map((m, i) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setFerias(ferias === i + 1 ? null : i + 1)}
+                      aria-pressed={ferias === i + 1}
+                      className={`pressable shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${
+                        ferias === i + 1
+                          ? "bg-brand text-white"
+                          : "bg-fill text-ink-2"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[12px] leading-snug text-ink-3">
+                  Opcional. Toque de novo pra desmarcar se não quiser contar.
+                </p>
+              </div>
+            ) : null}
+          </>
+        )}
+        {rendaVariavel ? null : (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[14px] text-ink-2">
+              Cai todo dia <strong className="font-semibold text-ink">{rendaDia}</strong>
+            </span>
+            <DayField value={rendaDia} onChange={setRendaDia} />
           </div>
         )}
       </div>
@@ -155,7 +231,7 @@ export function Onboarding() {
     <Step
       key="fixos"
       pergunta="O que sai todo mês?"
-      ajuda="Aluguel, internet, academia — o que vence sempre. Toque numa sugestão pra começar."
+      ajuda="Aluguel, internet, academia: o que vence sempre. Toque numa sugestão pra começar."
       podeSeguir
       rotuloSeguir={data.fixed.length ? "Continuar" : "Não tenho fixos"}
       onBack={() => setStep(1)}
@@ -179,7 +255,7 @@ export function Onboarding() {
     <Step
       key="variavel"
       pergunta="E o resto do mês?"
-      ajuda="Mercado, delivery, farmácia, um rolê — tudo que não é fixo. Um chute honesto vale mais que zero: sem esse número a projeção fica otimista demais."
+      ajuda="Mercado, delivery, farmácia, um rolê. Tudo que não é fixo. Um chute honesto vale mais que zero, porque sem esse número a projeção fica otimista demais."
       podeSeguir
       rotuloSeguir={cents(variavelDigits) ? "Continuar" : "Não sei estimar"}
       onBack={() => setStep(3)}
@@ -192,11 +268,34 @@ export function Onboarding() {
       </p>
     </Step>,
 
+    <Step
+      key="guardar"
+      pergunta="Quanto quer guardar por mês?"
+      ajuda={
+        sobraEstimada > 0
+          ? `Pelas suas contas sobram cerca de ${formatMoney(sobraEstimada)} por mês. Separar antes de gastar é o que funciona; guardar o que sobra é o que não funciona.`
+          : "Separar antes de gastar é o que funciona. Se hoje não sobra nada, tudo bem: pode deixar zerado e voltar aqui depois."
+      }
+      podeSeguir
+      rotuloSeguir={cents(guardarDigits) ? "Continuar" : "Ainda não consigo"}
+      onBack={() => setStep(4)}
+      onNext={() => setStep(6)}
+    >
+      <Keypad digits={guardarDigits} onChange={setGuardarDigits} tone="income" />
+      {cents(guardarDigits) > 0 ? (
+        <p className="px-2 pt-3 text-center text-[13px] leading-snug text-ink-3">
+          Esse valor sai do seu limite de gasto do mês, mas continua no seu
+          saldo. Vira sua reserva de emergência, e você pode trocar a meta
+          depois.
+        </p>
+      ) : null}
+    </Step>,
+
     <Revelacao
       key="fim"
       data={data}
       pending={pending}
-      onBack={() => setStep(4)}
+      onBack={() => setStep(5)}
       onFinish={finish}
     />,
   ];
@@ -214,6 +313,76 @@ export function Onboarding() {
         ))}
       </div>
       {steps[step]}
+    </div>
+  );
+}
+
+/**
+ * Onde o dinheiro está rendendo.
+ *
+ * As taxas dos atalhos são aproximações do momento em que isto foi escrito e
+ * mudam com a Selic — por isso ficam editáveis, e não fixas. Sem esse dado a
+ * projeção trata como dinheiro parado, o que subestima quem tem reserva
+ * aplicada. Com ele, o juro compõe mês a mês.
+ */
+function RendimentoPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (bps: number) => void;
+}) {
+  const atalhos = [
+    { bps: 0, rotulo: "Parado", nota: "conta corrente" },
+    { bps: 700, rotulo: "~7% a.a.", nota: "poupança" },
+    { bps: 1050, rotulo: "~10,5% a.a.", nota: "CDI / Tesouro" },
+  ];
+  const custom = !atalhos.some((a) => a.bps === value);
+
+  return (
+    <div className="flex flex-col gap-3 px-1 pt-5">
+      <span className="text-[14px] font-medium text-ink-2">
+        Esse dinheiro está aplicado em algum lugar?
+      </span>
+
+      <div className="grid grid-cols-3 gap-2">
+        {atalhos.map((a) => (
+          <button
+            key={a.bps}
+            type="button"
+            onClick={() => onChange(a.bps)}
+            aria-pressed={value === a.bps}
+            className={`pressable flex flex-col items-center gap-0.5 rounded-[16px] px-2 py-3 transition-colors ${
+              value === a.bps ? "bg-brand text-white" : "bg-fill text-ink"
+            }`}
+          >
+            <span className="text-[14px] font-semibold">{a.rotulo}</span>
+            <span
+              className={`text-[11px] ${
+                value === a.bps ? "text-white/75" : "text-ink-3"
+              }`}
+            >
+              {a.nota}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <label className="flex items-center gap-2.5">
+        <span className="text-[13px] text-ink-2">Outra taxa</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={custom && value > 0 ? String(value / 100).replace(".", ",") : ""}
+          onChange={(e) => {
+            const n = Number(e.target.value.replace(/[^\d,.]/g, "").replace(",", "."));
+            if (Number.isFinite(n)) onChange(Math.min(10000, Math.round(n * 100)));
+          }}
+          placeholder="0,0"
+          className="tnum w-20 rounded-full bg-fill px-3 py-1.5 text-center text-[15px] font-semibold text-ink outline-none"
+        />
+        <span className="text-[13px] text-ink-2">% ao ano</span>
+      </label>
     </div>
   );
 }
@@ -441,6 +610,8 @@ function Revelacao({
       startMonth,
       active: true,
       createdAt: new Date(),
+      thirteenth: false,
+      vacationMonth: null as number | null,
     };
 
     const recs: Recurrence[] = [
@@ -454,6 +625,8 @@ function Revelacao({
               kind: "income" as const,
               dayOfMonth: data.income.dayOfMonth,
               endMonth: null,
+              thirteenth: data.income.thirteenth,
+              vacationMonth: data.income.vacationMonth,
             },
           ]
         : []),
@@ -486,6 +659,7 @@ function Revelacao({
       variableOverrideCents: data.variableMonthlyCents || null,
       horizonMonths: 12,
       installPrompted: true,
+      yieldAnnualBps: data.yieldAnnualBps,
     };
 
     return buildProjection({
@@ -524,7 +698,7 @@ function Revelacao({
       <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
         {projection.monthlyNet >= 0
           ? `No ritmo de hoje sobram ${formatMoney(projection.monthlyNet)} por mês.`
-          : `No ritmo de hoje faltam ${formatMoney(-projection.monthlyNet)} por mês — e o app vai te mostrar exatamente onde.`}
+          : `No ritmo de hoje faltam ${formatMoney(-projection.monthlyNet)} por mês, e o app vai te mostrar exatamente onde.`}
         {data.installments.length
           ? " E isso já conta o mês em que cada parcela sua acaba."
           : ""}
@@ -532,7 +706,7 @@ function Revelacao({
 
       {!cresce ? (
         <p className="mt-4 rounded-[18px] bg-neg/10 px-4 py-3 text-[13.5px] leading-snug text-neg">
-          Suas saídas passam das entradas. Não é o fim do mundo — é justamente
+          Suas saídas passam das entradas. Não é o fim do mundo: é justamente
           isso que o app existe pra te ajudar a virar.
         </p>
       ) : null}

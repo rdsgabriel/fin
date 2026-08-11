@@ -17,10 +17,14 @@ export type ProjectedMonth = {
   income: number;
   fixedExpense: number;
   variableExpense: number;
+  /** Rendimento creditado no mês, se o dinheiro estiver aplicado. */
+  yield: number;
   net: number;
   endBalance: number;
   /** Recorrências cuja última parcela cai neste mês. */
   ending: Recurrence[];
+  /** 13º ou adicional de férias caindo neste mês, se houver. */
+  extras: { rotulo: string; valor: number } | null;
 };
 
 export type VariableSource = "manual" | "historico" | "sem-dados";
@@ -41,6 +45,10 @@ export type Projection = {
   variableSource: VariableSource;
   /** Quanto já foi gasto de variável no mês corrente (fora os fixos). */
   variableSpentThisMonth: number;
+  /** Taxa anual configurada, em decimal (0.105 = 10,5% a.a.). */
+  yieldAnnual: number;
+  /** Quanto o dinheiro rende ao longo de todo o horizonte projetado. */
+  totalYield: number;
   months: ProjectedMonth[];
   alerts: Alert[];
 };
@@ -54,6 +62,54 @@ function activeIn(r: Recurrence, month: MonthKey): boolean {
 
 function endsIn(r: Recurrence, month: MonthKey): boolean {
   return r.active && !!r.endMonth && monthKeyOf(r.endMonth) === month;
+}
+
+/**
+ * Entradas extras de quem é CLT, num mês específico.
+ *
+ * 13º sai em duas parcelas: metade até 30 de novembro, metade até 20 de
+ * dezembro. Férias trazem o adicional de 1/3 constitucional — só o adicional
+ * entra aqui, porque o salário do mês de férias já é contado pela recorrência
+ * normal. Somando tudo, o ano tem ~13,33 salários em vez de 12.
+ */
+function extrasCLT(r: Recurrence, month: MonthKey): number {
+  if (r.kind !== "income") return 0;
+
+  const mes = Number(month.slice(5, 7));
+  let extra = 0;
+
+  if (r.thirteenth && (mes === 11 || mes === 12)) {
+    extra += Math.round(r.amountCents / 2);
+  }
+  if (r.vacationMonth === mes) {
+    extra += Math.round(r.amountCents / 3);
+  }
+
+  return extra;
+}
+
+/** Descreve o que cai de extra num mês, pra narrativa. */
+export function descreverExtras(
+  recurrences: Recurrence[],
+  month: MonthKey,
+): { rotulo: string; valor: number } | null {
+  const mes = Number(month.slice(5, 7));
+  let valor = 0;
+  const partes: string[] = [];
+
+  for (const r of recurrences) {
+    if (r.kind !== "income" || !activeIn(r, month)) continue;
+    if (r.thirteenth && (mes === 11 || mes === 12)) {
+      valor += Math.round(r.amountCents / 2);
+      partes.push(mes === 11 ? "1ª parcela do 13º" : "2ª parcela do 13º");
+    }
+    if (r.vacationMonth === mes) {
+      valor += Math.round(r.amountCents / 3);
+      partes.push("adicional de 1/3 das férias");
+    }
+  }
+
+  return valor > 0 ? { rotulo: [...new Set(partes)].join(" e "), valor } : null;
 }
 
 /**
@@ -128,6 +184,14 @@ export function buildProjection(input: {
   const months: ProjectedMonth[] = [];
   let balance = currentBalance;
 
+  /* Rentabilidade: 10,5% a.a. não é 0,875% ao mês — juro compõe. A taxa
+     mensal equivalente é (1 + anual)^(1/12) − 1. Rende sobre o saldo que
+     abre o mês, e só quando ele é positivo: dinheiro no vermelho não rende
+     (e cobrar juros de dívida seria outro modelo, que o app não promete). */
+  const taxaAnual = settings.yieldAnnualBps / 10000;
+  const taxaMensal = taxaAnual > 0 ? Math.pow(1 + taxaAnual, 1 / 12) - 1 : 0;
+  let totalYield = 0;
+
   for (let i = 0; i < horizon; i++) {
     const month = addMonths(currentMonth, i);
     const partial = i === 0;
@@ -139,9 +203,12 @@ export function buildProjection(input: {
       ? active.filter((r) => r.dayOfMonth > todayDay)
       : active;
 
+    // O 13º e o 1/3 de férias entram no mês em que caem. Ficam de fora do
+    // `monthlyIncome` (o "ritmo de um mês cheio") de propósito: não são
+    // renda de todo mês e inflariam a leitura do orçamento mensal.
     const income = pending
       .filter((r) => r.kind === "income")
-      .reduce((s, r) => s + r.amountCents, 0);
+      .reduce((s, r) => s + r.amountCents + extrasCLT(r, month), 0);
     const fixedExpense = pending
       .filter((r) => r.kind === "expense")
       .reduce((s, r) => s + r.amountCents, 0);
@@ -150,7 +217,14 @@ export function buildProjection(input: {
     const remaining = partial ? Math.max(0, total - todayDay) : total;
     const variableExpense = Math.round((variableMonthly * remaining) / total);
 
-    const net = income - fixedExpense - variableExpense;
+    // No mês corrente o rendimento é proporcional aos dias que faltam.
+    const rendimento =
+      balance > 0 && taxaMensal > 0
+        ? Math.round(balance * taxaMensal * (remaining / total))
+        : 0;
+    totalYield += rendimento;
+
+    const net = income - fixedExpense - variableExpense + rendimento;
     balance += net;
 
     months.push({
@@ -159,9 +233,11 @@ export function buildProjection(input: {
       income,
       fixedExpense,
       variableExpense,
+      yield: rendimento,
       net,
       endBalance: balance,
       ending: active.filter((r) => endsIn(r, month)),
+      extras: descreverExtras(pending, month),
     });
   }
 
@@ -197,6 +273,8 @@ export function buildProjection(input: {
     variableMonthly,
     variableSource,
     variableSpentThisMonth: Math.max(0, gastoDoMes - fixosVencidos),
+    yieldAnnual: taxaAnual,
+    totalYield,
     months,
     alerts: buildAlerts(months, variableMonthly),
   };
@@ -488,6 +566,22 @@ export function buildStory(
         tone: "pos",
       });
     }
+  }
+
+  // Meses de 13º e de férias são os melhores momentos do ano pra quitar
+  // parcela ou fechar meta — merecem aparecer na narrativa.
+  for (const m of projection.months) {
+    const extra = m.extras;
+    if (!extra) continue;
+    events.push({
+      id: `extra-${m.month}`,
+      month: m.month,
+      label: formatMonthShort(m.month),
+      title: `Entra ${money(extra.valor)} a mais`,
+      detail: `${extra.rotulo[0].toUpperCase()}${extra.rotulo.slice(1)}. É o melhor mês do ano pra adiantar parcela ou fechar uma meta.`,
+      balance: m.endBalance,
+      tone: "pos",
+    });
   }
 
   const last = projection.months.at(-1);

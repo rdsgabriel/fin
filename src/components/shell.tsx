@@ -15,7 +15,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (TELA_CHEIA.some((p) => pathname.startsWith(p))) return <>{children}</>;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-36 pt-2 sm:pb-16 sm:pt-8">
+    <main className="mx-auto w-full max-w-2xl px-5 pb-36 pt-3 sm:px-4 sm:pb-16 sm:pt-8">
       {children}
     </main>
   );

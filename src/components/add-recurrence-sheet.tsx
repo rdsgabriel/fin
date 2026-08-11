@@ -12,6 +12,7 @@ import {
   todayISO,
 } from "@/lib/month";
 import { CategoryChips } from "./category-chips";
+import { DayField } from "./day-field";
 import { Keypad } from "./keypad";
 import { Segmented } from "./segmented";
 import { Sheet } from "./sheet";
@@ -38,6 +39,8 @@ export function AddRecurrenceSheet({
   const [dayOfMonth, setDayOfMonth] = useState(5);
   const [startMonth, setStartMonth] = useState(thisMonth);
   const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [clt, setClt] = useState(false);
+  const [ferias, setFerias] = useState<number | null>(null);
   const [state, action, pending] = useActionState(
     editando ? updateRecurrence : addRecurrence,
     null,
@@ -59,6 +62,8 @@ export function AddRecurrenceSheet({
       setDayOfMonth(editando.dayOfMonth);
       setStartMonth(inicio);
       setCategoryId(editando.categoryId);
+      setClt(editando.thirteenth);
+      setFerias(editando.vacationMonth);
       return;
     }
 
@@ -69,6 +74,8 @@ export function AddRecurrenceSheet({
     setInstallments(12);
     setDayOfMonth(5);
     setCategoryId(null);
+    setClt(false);
+    setFerias(null);
     setStartMonth(thisMonth);
   }, [open, thisMonth, editando]);
 
@@ -86,7 +93,13 @@ export function AddRecurrenceSheet({
       open={open}
       onClose={onClose}
       title={
-        editando ? "Editar fixo" : step === 1 ? "Novo fixo" : "Como se repete"
+        editando
+          ? "Editar"
+          : step === 1
+            ? "Novo fixo ou parcela"
+            : mode === "parcelado"
+              ? "Detalhes da parcela"
+              : "Detalhes do fixo"
       }
       leading={
         step === 2 && !editando ? (
@@ -101,18 +114,32 @@ export function AddRecurrenceSheet({
     >
       {step === 1 ? (
         <div className="animate-step-in">
-          <div className="px-4 pt-1">
+          {/* As duas escolhas ficam logo na abertura. Antes "Parcelado"
+              morava no segundo passo, e quem queria lançar um parcelamento
+              simplesmente não achava. */}
+          <div className="flex flex-col gap-2 px-4 pt-1">
             <Segmented
               value={kind}
               onChange={(k) => {
                 setKind(k);
                 setCategoryId(null);
+                if (k === "income") setMode("sempre");
               }}
               options={[
                 { value: "expense", label: "Saída" },
                 { value: "income", label: "Entrada" },
               ]}
             />
+            {kind === "expense" ? (
+              <Segmented
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: "sempre", label: "Todo mês" },
+                  { value: "parcelado", label: "Parcelado" },
+                ]}
+              />
+            ) : null}
           </div>
 
           <Keypad digits={digits} onChange={setDigits} tone={kind} />
@@ -138,6 +165,8 @@ export function AddRecurrenceSheet({
           <input type="hidden" name="installments" value={installments} />
           <input type="hidden" name="startMonth" value={startMonth} />
           <input type="hidden" name="dayOfMonth" value={dayOfMonth} />
+          <input type="hidden" name="thirteenth" value={clt ? "1" : ""} />
+          <input type="hidden" name="vacationMonth" value={ferias ?? ""} />
 
           <button
             type="button"
@@ -157,15 +186,6 @@ export function AddRecurrenceSheet({
           </button>
 
           <div className="flex flex-col gap-5 px-4 pb-4">
-            <Segmented
-              value={mode}
-              onChange={setMode}
-              options={[
-                { value: "sempre", label: "Todo mês" },
-                { value: "parcelado", label: "Parcelado" },
-              ]}
-            />
-
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="rec-desc"
@@ -219,39 +239,41 @@ export function AddRecurrenceSheet({
                     <strong className="font-semibold">
                       {formatMonthLong(lastMonth)}
                     </strong>{" "}
-                    — do mês seguinte em diante esses {formatMoney(cents)} voltam
+                    . Do mês seguinte em diante esses {formatMoney(cents)} voltam
                     a sobrar.
                   </p>
                 ) : null}
               </div>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-medium text-ink-2">
-                  {mode === "parcelado" ? "Primeira em" : "Começa em"}
-                </span>
-                <input
-                  type="month"
-                  value={startMonth}
-                  onChange={(e) => setStartMonth(e.target.value || thisMonth)}
-                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-ink outline-none"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-medium text-ink-2">
-                  Dia do mês
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  max={31}
-                  value={dayOfMonth}
-                  onChange={(e) => setDayOfMonth(Number(e.target.value) || 1)}
-                  className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-ink outline-none"
-                />
-              </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-ink-2">
+                {mode === "parcelado" ? "Primeira parcela em" : "Começa em"}
+              </span>
+              <input
+                type="month"
+                value={startMonth}
+                onChange={(e) => setStartMonth(e.target.value || thisMonth)}
+                className="rounded-[12px] bg-fill px-3.5 py-3 text-[15px] text-ink outline-none"
+              />
             </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-ink-2">
+                {kind === "income" ? "Cai todo dia" : "Vence todo dia"}{" "}
+                <strong className="font-semibold text-ink">{dayOfMonth}</strong>
+              </span>
+              <DayField value={dayOfMonth} onChange={setDayOfMonth} />
+            </div>
+
+            {kind === "income" && mode === "sempre" ? (
+              <CltFields
+                clt={clt}
+                setClt={setClt}
+                ferias={ferias}
+                setFerias={setFerias}
+              />
+            ) : null}
 
             <div className="flex flex-col gap-2">
               <span className="text-[13px] font-medium text-ink-2">
@@ -280,5 +302,63 @@ export function AddRecurrenceSheet({
         </form>
       )}
     </Sheet>
+  );
+}
+
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+
+/** 13º e adicional de 1/3 das férias — só faz sentido em entrada recorrente. */
+function CltFields({
+  clt,
+  setClt,
+  ferias,
+  setFerias,
+}: {
+  clt: boolean;
+  setClt: (v: boolean) => void;
+  ferias: number | null;
+  setFerias: (v: number | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={clt}
+          onChange={(e) => setClt(e.target.checked)}
+          className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]"
+        />
+        <span>
+          <span className="text-[15px] font-medium">É CLT</span>
+          <span className="mt-0.5 block text-[13px] leading-snug text-ink-2">
+            Conta 13º (metade em nov, metade em dez) e o adicional de 1/3 das
+            férias.
+          </span>
+        </span>
+      </label>
+
+      {clt ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-medium text-ink-2">
+            Mês das férias
+          </span>
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto py-0.5">
+            {MESES.map((m, i) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setFerias(ferias === i + 1 ? null : i + 1)}
+                aria-pressed={ferias === i + 1}
+                className={`pressable shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${
+                  ferias === i + 1 ? "bg-brand text-white" : "bg-fill text-ink-2"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -96,6 +96,15 @@ export const recurrences = pgTable(
     /** Dia 1 do último mês em que ocorre. null = por tempo indeterminado. */
     endMonth: date("end_month"),
     active: boolean("active").notNull().default(true),
+    /**
+     * Só para entradas CLT. Quem é registrado recebe ~13,33 salários por ano:
+     * o 13º (metade em novembro, metade em dezembro) e o adicional de 1/3
+     * constitucional sobre as férias. Ignorar isso subestima a projeção o ano
+     * inteiro — e são justamente os meses em que dá pra quitar parcela.
+     */
+    thirteenth: boolean("thirteenth").notNull().default(false),
+    /** Mês (1-12) em que você tira férias, pro adicional de 1/3. null = não usa. */
+    vacationMonth: integer("vacation_month"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -153,6 +162,11 @@ export const settings = pgTable("settings", {
   horizonMonths: integer("horizon_months").notNull().default(12),
   /** Marca se a pessoa já passou pela tela de instalar o PWA. */
   installPrompted: boolean("install_prompted").notNull().default(false),
+  /**
+   * Rentabilidade anual do dinheiro parado, em pontos-base (1050 = 10,50% a.a.).
+   * Inteiro pra não guardar float. 0 = parado na conta, sem render.
+   */
+  yieldAnnualBps: integer("yield_annual_bps").notNull().default(0),
 });
 
 export type User = typeof users.$inferSelect;

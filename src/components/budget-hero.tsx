@@ -75,7 +75,7 @@ export function BudgetHero({
       {orcamento.aporteInviavel ? (
         <p className="mt-4 rounded-[16px] bg-warn/12 px-4 py-3 text-[13px] leading-snug text-warn">
           O que você quer guardar por mês é maior do que sobra depois dos
-          fixos. A meta não é impossível — só vai precisar de mais tempo ou de
+          fixos. A meta não é impossível: só vai precisar de mais tempo ou de
           um corte em algum fixo.
         </p>
       ) : null}

@@ -82,6 +82,10 @@ await p.waitForTimeout(250);
 
 for (const d of "90000") await tap(d); // variável 900,00
 await p.getByRole("button", { name: "Continuar" }).click();
+await p.waitForTimeout(300);
+
+for (const d of "50000") await tap(d); // guardar 500,00 por mês
+await p.getByRole("button", { name: "Continuar" }).click();
 await p.waitForTimeout(700);
 
 const revelado = (await p.locator("p.display").first().textContent())?.trim();
@@ -102,6 +106,9 @@ checar("entradas", tem("R$ 4.500,00"), "R$ 4.500,00");
 checar("sobra por mês", tem("R$ 1.500,00"), "R$ 1.500,00");
 checar("gasto variável", tem("R$ 900,00"), "R$ 900,00");
 checar("marco da parcela", tem("Sofá quitado"), "Sofá quitado");
+checar("meta criada", tem("Reserva de emergência"), "Reserva de emergência");
+/* teto = 4.500 − (1.600 + 120 + 380) − 500 guardados = 1.900 */
+checar("pode gastar (já sem o que guarda)", tem("R$ 1.900,00"), "R$ 1.900,00");
 console.log(`  · revelado no onboarding: ${revelado}`);
 
 console.log("\n5. isolamento entre contas");

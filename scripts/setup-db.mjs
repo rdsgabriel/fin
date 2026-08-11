@@ -93,6 +93,14 @@ const statements = [
      references users(id) on delete cascade`,
   `alter table settings add column if not exists install_prompted boolean
      not null default false`,
+  `alter table recurrences add column if not exists thirteenth boolean
+     not null default false`,
+  `alter table recurrences add column if not exists vacation_month integer`,
+  `alter table settings add column if not exists yield_annual_bps integer
+     not null default 0`,
+  `alter table recurrences drop constraint if exists recurrences_vacation`,
+  `alter table recurrences add constraint recurrences_vacation
+     check (vacation_month is null or vacation_month between 1 and 12)`,
 
   `create table if not exists goals (
      id serial primary key,

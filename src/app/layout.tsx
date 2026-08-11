@@ -3,7 +3,7 @@ import { RegisterSW } from "@/components/register-sw";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fin — pra onde seu dinheiro vai",
+  title: "Fin · pra onde seu dinheiro vai",
   description:
     "Controle financeiro simples que projeta os próximos meses a partir do que você ganha, gasta e ainda deve.",
   manifest: "/manifest.webmanifest",

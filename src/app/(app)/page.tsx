@@ -13,6 +13,7 @@ import {
   totalAporte,
 } from "@/lib/projection";
 import { BudgetHero } from "@/components/budget-hero";
+import { Logo } from "@/components/logo";
 import { GoalsList } from "@/components/goals-list";
 import { formatMoney, formatSigned } from "@/lib/money";
 import { formatMonthLong, formatMonthShort, todayISO } from "@/lib/month";
@@ -54,9 +55,17 @@ export default async function Home({
 
   return (
     <div className="flex flex-col gap-12 pb-8">
-      {/* ---- Capítulo 1: quanto dá pra gastar hoje ---- */}
+      {/* ---- Capítulo 1: quanto dá pra gastar hoje ----
+           Sem barra de navegação, mas com a marca presente: o logo divide a
+           linha com a data, então a identidade aparece sem custar altura. */}
       <div>
-        <p className="chapter mb-1 px-0 first-letter:uppercase">{weekday}</p>
+        <div className="mb-4 flex items-center justify-between gap-3 pt-2 sm:hidden">
+          <Logo size={22} />
+          <p className="chapter first-letter:uppercase">{weekday}</p>
+        </div>
+        <p className="chapter mb-1 hidden first-letter:uppercase sm:block">
+          {weekday}
+        </p>
         <BudgetHero
           orcamento={orcamento}
           saldo={projection.currentBalance}
@@ -75,7 +84,7 @@ export default async function Home({
               ? "O gasto variável é o valor que você definiu em Ajustes."
               : projection.variableSource === "historico"
                 ? `O gasto variável é a média dos seus últimos ${data.settings.lookbackMonths} meses, já descontando os fixos.`
-                : "Ainda sem histórico, então o gasto variável está zerado — a projeção está otimista."}
+                : "Ainda sem histórico, então o gasto variável está zerado. A projeção está otimista."}
           </p>
         </Card>
       </div>
@@ -210,7 +219,7 @@ function Welcome() {
         </h1>
         <p className="mt-5 max-w-sm text-[16px] leading-relaxed text-ink-2">
           Responda três perguntas rápidas e o app monta a projeção do seu saldo
-          mês a mês — incluindo o dia em que cada parcela sua acaba.
+          mês a mês, incluindo o dia em que cada parcela sua acaba.
         </p>
       </div>
 

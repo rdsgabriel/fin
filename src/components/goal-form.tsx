@@ -49,7 +49,7 @@ export function GoalForm() {
 
       <Field
         label="Quanto separar por mês"
-        hint="Sai do seu limite de gasto do mês, mas não some do saldo — o dinheiro continua seu."
+        hint="Sai do seu limite de gasto do mês, mas não some do saldo. O dinheiro continua seu."
       >
         <Input name="monthly" inputMode="decimal" placeholder="opcional" />
       </Field>

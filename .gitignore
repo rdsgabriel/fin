@@ -6,3 +6,6 @@ out/
 next-env.d.ts
 *.tsbuildinfo
 .DS_Store
+
+# screenshots de revisão visual
+shots/
