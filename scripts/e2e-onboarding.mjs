@@ -97,10 +97,10 @@ console.log("\n4. home");
 /* Intl.NumberFormat('pt-BR') separa "R$" do número com espaço não-quebrável
    (U+00A0), não com espaço comum — sem normalizar, nenhuma comparação bate. */
 const normaliza = (s) => s.replace(/ /g, " ");
-// O detalhamento do mês fica fechado por padrão, e innerText não enxerga
-// conteúdo de <details> recolhido. Abre antes de conferir os números.
-await p.getByText("Como seu mês se divide").click();
-await p.waitForTimeout(400);
+// Os números de conferência vivem num <details> fechado, e innerText não
+// enxerga conteúdo recolhido. Abre antes de checar.
+await p.getByText("Ver os números por trás").click();
+await p.waitForTimeout(500);
 const corpo = normaliza(await p.locator("body").innerText());
 const tem = (s) => (corpo.includes(s) ? s : `FALTOU (${s})`);
 

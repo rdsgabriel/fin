@@ -1,4 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { desc, eq } from "drizzle-orm";
 import { db, categories, goals, recurrences, settings, transactions } from "@/db";
 import { todayISO } from "./month";
 
@@ -6,18 +7,29 @@ import { todayISO } from "./month";
    de um contexto implícito: se um dia alguém esquecer de passar, o
    TypeScript reclama em vez de vazar dado de outra conta. */
 
-export async function getSettings(userId: number) {
+/** Tag de cache de uma conta. Toda escrita invalida esta única string. */
+export function tagDoUsuario(userId: number) {
+  return `dados-${userId}`;
+}
+
+async function lerSettings(userId: number) {
   const rows = await db
     .select()
     .from(settings)
     .where(eq(settings.userId, userId));
-  if (rows[0]) return rows[0];
+  return rows[0] ?? null;
+}
 
-  const created = await db
+export async function getSettings(userId: number) {
+  const existente = await lerSettings(userId);
+  if (existente) return existente;
+
+  // Criar linha é escrita, então fica fora do cache.
+  const criada = await db
     .insert(settings)
     .values({ userId, openingDate: todayISO() })
     .returning();
-  return created[0];
+  return criada[0];
 }
 
 export function getCategories(userId: number) {
@@ -53,39 +65,48 @@ export function getGoals(userId: number) {
     .orderBy(goals.targetCents);
 }
 
-/** Tudo que a projeção precisa, numa ida só. */
-export async function getProjectionData(userId: number) {
-  const [s, txs, recs, cats, metas] = await Promise.all([
-    getSettings(userId),
-    getTransactions(userId),
-    getRecurrences(userId),
-    getCategories(userId),
-    getGoals(userId),
-  ]);
-  return {
-    settings: s,
-    transactions: txs,
-    recurrences: recs,
-    categories: cats,
-    goals: metas,
-  };
+/**
+ * Tudo que as telas precisam, numa consulta só e em cache.
+ *
+ * Antes cada navegação disparava cinco consultas ao Neon, e como o banco
+ * está na rede a troca de aba esperava a ida e a volta. Agora o resultado
+ * fica em cache no servidor sob a tag da conta; qualquer escrita chama
+ * `updateTag` e a próxima leitura já vem atualizada.
+ */
+export async function getDadosDoUsuario(userId: number) {
+  const carregar = unstable_cache(
+    async () => {
+      const [s, txs, recs, cats, metas] = await Promise.all([
+        lerSettings(userId),
+        getTransactions(userId),
+        getRecurrences(userId),
+        getCategories(userId),
+        getGoals(userId),
+      ]);
+      return {
+        settings: s,
+        transactions: txs,
+        recurrences: recs,
+        categories: cats,
+        goals: metas,
+      };
+    },
+    ["dados-do-usuario", String(userId)],
+    /* A tag cobre toda escrita feita pelo app, que invalida na hora. Este
+       prazo é só rede de segurança pra mudança feita por fora (o script de
+       seed, por exemplo), que o app não tem como saber que aconteceu. */
+    { tags: [tagDoUsuario(userId)], revalidate: 60 },
+  );
+
+  const dados = await carregar();
+
+  // Conta recém-criada ainda não tem linha de preferências; cria e devolve
+  // sem cache, porque a próxima leitura já vai encontrar tudo.
+  if (!dados.settings) {
+    return { ...dados, settings: await getSettings(userId) };
+  }
+  return { ...dados, settings: dados.settings };
 }
 
-/** Conta se o usuário já tem qualquer dado — usado pra decidir o onboarding. */
-export async function temDados(userId: number) {
-  const [rec] = await db
-    .select({ id: recurrences.id })
-    .from(recurrences)
-    .where(eq(recurrences.userId, userId))
-    .limit(1);
-  if (rec) return true;
-
-  const [tx] = await db
-    .select({ id: transactions.id })
-    .from(transactions)
-    .where(eq(transactions.userId, userId))
-    .limit(1);
-  return Boolean(tx);
-}
-
-export { and };
+/** Mantém o nome antigo, que várias telas já usam. */
+export const getProjectionData = getDadosDoUsuario;

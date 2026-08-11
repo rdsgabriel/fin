@@ -113,11 +113,56 @@ export function descreverExtras(
   return valor > 0 ? { rotulo: [...new Set(partes)].join(" e "), valor } : null;
 }
 
+/** Compara descrições ignorando caixa, acento e espaço sobrando. */
+function normalizar(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 /**
- * Estima o gasto variável mensal — o que não é fixo nem parcelado, tipo
- * mercado, iFood, farmácia. Sai da média dos últimos meses fechados,
- * descontando o que já está contabilizado como recorrência naqueles meses
- * (senão o fixo entraria duas vezes na projeção).
+ * Soma o que saiu num mês sem contar o que já é fixo.
+ *
+ * O jeito anterior subtraía do total gasto a soma de TODAS as recorrências
+ * ativas, assumindo que a pessoa também lança aluguel e academia como
+ * lançamento. Mas o app nunca pede isso: fixo é cadastrado uma vez e a
+ * projeção o considera sozinha. Resultado, quem lançava R$ 120 de mercado
+ * via "gastou R$ 0", porque 120 − 1.690 de fixos dava negativo e virava
+ * zero. O gasto real ficava invisível.
+ *
+ * Agora só é descartado o lançamento que claramente duplica um fixo, pelo
+ * nome. Quem não lança fixo nenhum tem o gasto contado por inteiro; quem
+ * lança "Aluguel" não vê ele contado duas vezes.
+ */
+function gastoVariavelDoMes(
+  transactions: Transaction[],
+  recurrences: Recurrence[],
+  month: MonthKey,
+): { total: number; houveLancamento: boolean } {
+  const nomesFixos = new Set(
+    recurrences
+      .filter((r) => r.kind === "expense" && activeIn(r, month))
+      .map((r) => normalizar(r.description)),
+  );
+
+  let total = 0;
+  let houveLancamento = false;
+
+  for (const t of transactions) {
+    if (t.kind !== "expense" || monthKeyOf(t.date) !== month) continue;
+    houveLancamento = true;
+    if (nomesFixos.has(normalizar(t.description))) continue;
+    total += t.amountCents;
+  }
+
+  return { total, houveLancamento };
+}
+
+/**
+ * Estima o gasto variável mensal a partir dos meses já fechados: mercado,
+ * delivery, farmácia, o que não é fixo nem parcelado.
  */
 function estimateVariable(
   transactions: Transaction[],
@@ -125,31 +170,24 @@ function estimateVariable(
   currentMonth: MonthKey,
   lookback: number,
 ): { amount: number; source: VariableSource } {
-  const months: MonthKey[] = [];
-  for (let i = lookback; i >= 1; i--) months.push(addMonths(currentMonth, -i));
-
-  const spentByMonth = new Map<MonthKey, number>(months.map((m) => [m, 0]));
-  let sawAny = false;
-
-  for (const t of transactions) {
-    if (t.kind !== "expense") continue;
-    const m = monthKeyOf(t.date);
-    if (!spentByMonth.has(m)) continue;
-    spentByMonth.set(m, spentByMonth.get(m)! + t.amountCents);
-    sawAny = true;
-  }
-
-  if (!sawAny) return { amount: 0, source: "sem-dados" };
+  const meses: MonthKey[] = [];
+  for (let i = lookback; i >= 1; i--) meses.push(addMonths(currentMonth, -i));
 
   let total = 0;
-  for (const m of months) {
-    const fixed = recurrences
-      .filter((r) => r.kind === "expense" && activeIn(r, m))
-      .reduce((sum, r) => sum + r.amountCents, 0);
-    total += Math.max(0, spentByMonth.get(m)! - fixed);
+  let algumMes = false;
+
+  for (const m of meses) {
+    const { total: gasto, houveLancamento } = gastoVariavelDoMes(
+      transactions,
+      recurrences,
+      m,
+    );
+    if (houveLancamento) algumMes = true;
+    total += gasto;
   }
 
-  return { amount: Math.round(total / months.length), source: "historico" };
+  if (!algumMes) return { amount: 0, source: "sem-dados" };
+  return { amount: Math.round(total / meses.length), source: "historico" };
 }
 
 export function buildProjection(input: {
@@ -268,19 +306,8 @@ export function buildProjection(input: {
     .filter((r) => r.kind === "expense")
     .reduce((s, r) => s + r.amountCents, 0);
 
-  // Gasto variável já realizado no mês: tudo que saiu menos os fixos que
-  // já venceram. Mesma lógica de estimateVariable, pra não contar em dobro.
-  const gastoDoMes = transactions
-    .filter((t) => t.kind === "expense" && monthKeyOf(t.date) === currentMonth)
-    .reduce((s, t) => s + t.amountCents, 0);
-  const fixosVencidos = recurrences
-    .filter(
-      (r) =>
-        r.kind === "expense" &&
-        activeIn(r, currentMonth) &&
-        r.dayOfMonth <= todayDay,
-    )
-    .reduce((s, r) => s + r.amountCents, 0);
+  // Mesmo critério do histórico, pra o número da tela bater com a média.
+  const gastoDoMes = gastoVariavelDoMes(transactions, recurrences, currentMonth);
 
   return {
     currentBalance,
@@ -289,7 +316,7 @@ export function buildProjection(input: {
     monthlyNet: monthlyIncome - monthlyFixed - variableMonthly,
     variableMonthly,
     variableSource,
-    variableSpentThisMonth: Math.max(0, gastoDoMes - fixosVencidos),
+    variableSpentThisMonth: gastoDoMes.total,
     yieldAnnual: taxaAnual,
     totalYield,
     months,

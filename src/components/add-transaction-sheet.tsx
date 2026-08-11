@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { addTransaction } from "@/app/actions";
 import type { Category } from "@/db/schema";
 import { formatMoney } from "@/lib/money";
@@ -47,7 +47,17 @@ export function AddTransactionSheet({
     }
   }, [open]);
 
+  /* Fecha só quando o estado MUDA pra ok.
+     `onClose` é uma arrow inline lá no nav, então muda de identidade a cada
+     render e faz este efeito rodar de novo. Como `state.ok` continua true
+     depois de um envio, a folha se fechava sozinha ao ser reaberta: dava pra
+     lançar uma vez e depois nada mais abria sem recarregar a página.
+     Comparar a identidade do estado resolve, porque useActionState devolve
+     um objeto novo a cada submissão. */
+  const estadoVisto = useRef(state);
   useEffect(() => {
+    if (state === estadoVisto.current) return;
+    estadoVisto.current = state;
     if (state?.ok) onClose();
   }, [state, onClose]);
 

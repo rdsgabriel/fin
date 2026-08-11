@@ -1,5 +1,6 @@
 import { deleteCategory } from "@/app/actions";
 import { sair } from "@/app/auth-actions";
+import { BotaoAtualizar } from "@/components/register-sw";
 import { CategoryForm } from "@/components/category-form";
 import { SettingsForm } from "@/components/settings-form";
 import { Card, Row, Chapter } from "@/components/ui";
@@ -43,6 +44,13 @@ export default async function AjustesPage() {
               </button>
             </form>
           </Row>
+        </Card>
+      </section>
+
+      <section>
+        <Chapter>Aplicativo</Chapter>
+        <Card>
+          <BotaoAtualizar />
         </Card>
       </section>
 

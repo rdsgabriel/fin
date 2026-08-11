@@ -1,19 +1,28 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { and, eq, not } from "drizzle-orm";
 import { db, categories, goals, recurrences, settings, transactions } from "@/db";
 import { requireUser } from "@/lib/auth";
+import { tagDoUsuario } from "@/lib/queries";
 import { parseMoneyToCents } from "@/lib/money";
 import { addMonths, firstDayOf, monthKeyOf, todayISO } from "@/lib/month";
 
 /** Formato que o `useActionState` dos formulários espera de volta. */
 export type FormState = { error?: string; ok?: boolean } | null;
 
-function revalidateAll() {
-  for (const path of ["/", "/lancamentos", "/fixos", "/ajustes"]) {
-    revalidatePath(path);
-  }
+/**
+ * Invalida o cache da conta depois de uma escrita.
+ *
+ * `{ expire: 0 }` derruba a entrada na hora, em vez do stale-while-revalidate
+ * do perfil "max". Num app de dinheiro, ver o saldo de antes do lançamento
+ * que você acabou de fazer é pior do que esperar a consulta.
+ *
+ * (`updateTag` não serve aqui: ele opera sobre tags de `cacheTag`/`fetch`,
+ * e as nossas vêm de `unstable_cache`.)
+ */
+function invalidar(userId: number) {
+  revalidateTag(tagDoUsuario(userId), { expire: 0 });
 }
 
 /** O teclado manda centavos direto; o formulário simples manda texto ("12,34"). */
@@ -67,7 +76,7 @@ export async function addTransaction(
     date: String(formData.get("date") ?? "") || todayISO(),
   });
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -81,7 +90,7 @@ export async function deleteTransaction(formData: FormData) {
   await db
     .delete(transactions)
     .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)));
-  revalidateAll();
+  invalidar(user.id);
 }
 
 export async function addRecurrence(
@@ -138,7 +147,7 @@ export async function addRecurrence(
     vacationMonth: ferias,
   });
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -203,7 +212,7 @@ export async function updateRecurrence(
     })
     .where(and(eq(recurrences.id, id), eq(recurrences.userId, user.id)));
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -233,7 +242,7 @@ export async function updateGoal(
     })
     .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -246,7 +255,7 @@ export async function toggleRecurrence(formData: FormData) {
     .update(recurrences)
     .set({ active: not(recurrences.active) })
     .where(and(eq(recurrences.id, id), eq(recurrences.userId, user.id)));
-  revalidateAll();
+  invalidar(user.id);
 }
 
 export async function deleteRecurrence(formData: FormData) {
@@ -257,7 +266,7 @@ export async function deleteRecurrence(formData: FormData) {
   await db
     .delete(recurrences)
     .where(and(eq(recurrences.id, id), eq(recurrences.userId, user.id)));
-  revalidateAll();
+  invalidar(user.id);
 }
 
 export async function updateSettings(
@@ -292,7 +301,7 @@ export async function updateSettings(
     })
     .where(eq(settings.userId, user.id));
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -311,7 +320,7 @@ export async function addCategory(
     color: String(formData.get("color") ?? "#8E8E93"),
   });
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -323,7 +332,7 @@ export async function deleteCategory(formData: FormData) {
   await db
     .delete(categories)
     .where(and(eq(categories.id, id), eq(categories.userId, user.id)));
-  revalidateAll();
+  invalidar(user.id);
 }
 
 export async function addGoal(
@@ -348,7 +357,7 @@ export async function addGoal(
     deadline: prazo ? firstDayOf(prazo) : null,
   });
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
 
@@ -360,7 +369,7 @@ export async function deleteGoal(formData: FormData) {
   await db
     .delete(goals)
     .where(and(eq(goals.id, id), eq(goals.userId, user.id)));
-  revalidateAll();
+  invalidar(user.id);
 }
 
 export type OnboardingData = {
@@ -464,6 +473,6 @@ export async function saveOnboarding(data: OnboardingData) {
     });
   }
 
-  revalidateAll();
+  invalidar(user.id);
   return { ok: true };
 }
