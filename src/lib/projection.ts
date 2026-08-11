@@ -27,7 +27,8 @@ export type ProjectedMonth = {
   extras: { rotulo: string; valor: number } | null;
 };
 
-export type VariableSource = "manual" | "historico" | "sem-dados";
+/** "estimado" = o chute do onboarding, ainda sem histórico pra substituir. */
+export type VariableSource = "manual" | "historico" | "estimado" | "sem-dados";
 
 export type Alert =
   | { type: "negativo"; month: MonthKey; balance: number }
@@ -177,9 +178,25 @@ export function buildProjection(input: {
     currentMonth,
     settings.lookbackMonths,
   );
-  const variableMonthly = settings.variableOverrideCents ?? estimate.amount;
+  /* Precedência do gasto variável:
+     1. trava manual de Ajustes, que é escolha explícita
+     2. histórico real, assim que existe
+     3. o chute do onboarding, só enquanto não há histórico
+     Antes o chute do onboarding ocupava o lugar da trava, e nunca saía:
+     seis meses de gastos reais não mudavam a projeção. */
+  const temHistorico = estimate.source === "historico";
+  const variableMonthly =
+    settings.variableOverrideCents ??
+    (temHistorico ? estimate.amount : (settings.variableSeedCents ?? 0));
+
   const variableSource: VariableSource =
-    settings.variableOverrideCents != null ? "manual" : estimate.source;
+    settings.variableOverrideCents != null
+      ? "manual"
+      : temHistorico
+        ? "historico"
+        : settings.variableSeedCents
+          ? "estimado"
+          : "sem-dados";
 
   const months: ProjectedMonth[] = [];
   let balance = currentBalance;
@@ -437,8 +454,11 @@ export type Orcamento = {
   /** Entradas − fixos − aporte: o teto de gasto livre do mês. */
   teto: number;
   gasto: number;
-  /** O número que importa: quanto ainda dá pra gastar sem atrasar as metas. */
+  /** Quanto ainda dá pra gastar no mês sem atrasar as metas. */
   livre: number;
+  /** O mesmo, dividido pelos dias que faltam. É o número acionável no caixa. */
+  porDia: number;
+  diasRestantes: number;
   aporte: number;
   /** O aporte prometido não cabe no que sobra depois dos fixos. */
   aporteInviavel: boolean;
@@ -456,12 +476,24 @@ export type Orcamento = {
 export function calcularOrcamento(
   projection: Projection,
   aporte: number,
+  today = todayISO(),
 ): Orcamento {
   const teto = projection.monthlyIncome - projection.monthlyFixed - aporte;
+  const livre = teto - projection.variableSpentThisMonth;
+
+  // Hoje conta como dia disponível, então o dia corrente entra na divisão.
+  const mes = monthKeyOf(today);
+  const diasRestantes = Math.max(
+    1,
+    daysInMonth(mes) - Number(today.slice(8, 10)) + 1,
+  );
+
   return {
     teto,
     gasto: projection.variableSpentThisMonth,
-    livre: teto - projection.variableSpentThisMonth,
+    livre,
+    porDia: Math.floor(livre / diasRestantes),
+    diasRestantes,
     aporte,
     aporteInviavel:
       projection.monthlyIncome - projection.monthlyFixed < aporte,

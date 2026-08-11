@@ -44,10 +44,12 @@
     #f3b98d 100%
   );
 
-  /* Orbes do fundo, tirados das mesmas cores do gradiente. */
-  --orb-1: rgba(111, 224, 230, 0.22);
-  --orb-2: rgba(158, 107, 242, 0.2);
-  --orb-3: rgba(206, 139, 228, 0.18);
+  /* Orbes do fundo. Devem ser sentidos, não vistos: em telas longas como
+     Ajustes o gradiente fica fixo e um valor alto vira mancha colorida
+     competindo com o conteúdo. */
+  --orb-1: rgba(111, 224, 230, 0.13);
+  --orb-2: rgba(158, 107, 242, 0.12);
+  --orb-3: rgba(206, 139, 228, 0.1);
 
   --scrim: rgba(23, 20, 32, 0.32);
   --shadow-1: 0 1px 2px rgba(23, 20, 32, 0.04), 0 6px 20px rgba(23, 20, 32, 0.06);
@@ -79,10 +81,10 @@
     --neg: #f2495a;
     --warn: #f0a227;
 
-    /* No escuro os orbes viram brilho, então sobem de intensidade. */
-    --orb-1: rgba(90, 214, 226, 0.2);
-    --orb-2: rgba(150, 92, 245, 0.32);
-    --orb-3: rgba(200, 124, 228, 0.2);
+    /* No escuro o olho perdoa mais, mas ainda assim contido. */
+    --orb-1: rgba(90, 214, 226, 0.12);
+    --orb-2: rgba(150, 92, 245, 0.2);
+    --orb-3: rgba(200, 124, 228, 0.12);
 
     --scrim: rgba(0, 0, 0, 0.6);
     --shadow-1: none;
@@ -129,9 +131,9 @@ body {
   overscroll-behavior-y: none;
   background-color: var(--bg);
   background-image:
-    radial-gradient(80% 55% at 12% -5%, var(--orb-1) 0%, transparent 62%),
-    radial-gradient(70% 48% at 95% 12%, var(--orb-2) 0%, transparent 60%),
-    radial-gradient(85% 50% at 70% 100%, var(--orb-3) 0%, transparent 62%);
+    radial-gradient(95% 62% at 8% -10%, var(--orb-1) 0%, transparent 70%),
+    radial-gradient(85% 55% at 100% 6%, var(--orb-2) 0%, transparent 68%),
+    radial-gradient(100% 58% at 75% 104%, var(--orb-3) 0%, transparent 70%);
   background-attachment: fixed, fixed, fixed;
   background-repeat: no-repeat;
 }

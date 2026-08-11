@@ -156,8 +156,17 @@ export const settings = pgTable("settings", {
   openingDate: date("opening_date").notNull(),
   /** Quantos meses de histórico usar pra estimar o gasto variável. */
   lookbackMonths: integer("lookback_months").notNull().default(3),
-  /** Se preenchido, substitui a estimativa automática de gasto variável. */
+  /**
+   * Trava manual do gasto variável, definida em Ajustes. Vence sobre tudo,
+   * inclusive sobre o histórico, porque é uma escolha explícita da pessoa.
+   */
   variableOverrideCents: integer("variable_override_cents"),
+  /**
+   * O chute dado no onboarding. Serve só enquanto não existe histórico:
+   * assim que houver meses fechados, o gasto real manda. Antes isso morava
+   * no campo de trava e o chute do cadastro nunca era substituído.
+   */
+  variableSeedCents: integer("variable_seed_cents"),
   /** Horizonte padrão da projeção, em meses. */
   horizonMonths: integer("horizon_months").notNull().default(12),
   /** Marca se a pessoa já passou pela tela de instalar o PWA. */

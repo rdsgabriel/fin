@@ -399,7 +399,9 @@ export async function saveOnboarding(data: OnboardingData) {
       // Sem histórico de lançamentos ainda, a estimativa automática daria
       // zero. O que a pessoa informou aqui vale como ponto de partida até
       // existir histórico suficiente pra calcular sozinho.
-      variableOverrideCents:
+      // Vai pro campo de semente, não pro de trava: assim que existir
+      // histórico real, o gasto de verdade substitui esse chute.
+      variableSeedCents:
         data.variableMonthlyCents > 0
           ? Math.round(data.variableMonthlyCents)
           : null,

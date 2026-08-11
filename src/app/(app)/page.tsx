@@ -73,7 +73,17 @@ export default async function Home({
           rendimentoAnual={projection.yieldAnnual}
         />
 
-        <Card className="rise mt-6 p-5" style={{ animationDelay: "70ms" }}>
+        {/* Fechado por padrão: é conferência, não decisão. Aberto direto,
+            empurrava a projeção pra fora da primeira tela. */}
+        <Card className="rise mt-6" style={{ animationDelay: "70ms" }}>
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-[14px] font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
+              <span className="flex-1">Como seu mês se divide</span>
+              <span className="text-ink-3 transition-transform duration-300 group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className="border-t border-hairline p-5">
           <MonthFlow
             income={projection.monthlyIncome}
             fixed={projection.monthlyFixed}
@@ -84,8 +94,10 @@ export default async function Home({
             {projection.variableSource === "manual"
               ? "O gasto variável é o valor que você definiu em Ajustes."
               : projection.variableSource === "historico"
-                ? `O gasto variável é a média dos seus últimos ${data.settings.lookbackMonths} meses, já descontando os fixos.`
-                : "Ainda sem histórico, então o gasto variável está zerado. A projeção está otimista."}
+                ? `O gasto variável é a média real dos seus últimos ${data.settings.lookbackMonths} meses, já descontando os fixos.`
+                : projection.variableSource === "estimado"
+                  ? "O gasto variável ainda é o que você estimou no cadastro. Assim que fechar um mês de lançamentos, ele passa a sair do gasto real."
+                  : "Ainda sem histórico, então o gasto variável está zerado. A projeção está otimista."}
             {projection.yieldAnnual > 0 ? (
               <>
                 {" "}
@@ -94,6 +106,8 @@ export default async function Home({
               </>
             ) : null}
           </p>
+            </div>
+          </details>
         </Card>
       </div>
 

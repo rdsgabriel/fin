@@ -98,6 +98,12 @@ const statements = [
   `alter table recurrences add column if not exists vacation_month integer`,
   `alter table settings add column if not exists yield_annual_bps integer
      not null default 0`,
+  `alter table settings add column if not exists variable_seed_cents integer`,
+  /* O chute do onboarding morava no campo de trava e nunca era substituído
+     pelo histórico real. Move quem já existe pro campo certo. */
+  `update settings set variable_seed_cents = variable_override_cents,
+     variable_override_cents = null
+     where variable_seed_cents is null and variable_override_cents is not null`,
   `alter table recurrences drop constraint if exists recurrences_vacation`,
   `alter table recurrences add constraint recurrences_vacation
      check (vacation_month is null or vacation_month between 1 and 12)`,
