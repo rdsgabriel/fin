@@ -9,3 +9,6 @@ next-env.d.ts
 
 # screenshots de revisão visual
 shots/
+
+# scripts temporários de verificação
+scripts/_*.mjs
