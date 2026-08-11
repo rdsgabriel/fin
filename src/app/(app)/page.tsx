@@ -15,7 +15,7 @@ import {
 import { BudgetHero } from "@/components/budget-hero";
 import { Logo } from "@/components/logo";
 import { GoalsList } from "@/components/goals-list";
-import { formatMoney, formatSigned } from "@/lib/money";
+import { formatMoney, formatRate, formatSigned } from "@/lib/money";
 import { formatMonthLong, formatMonthShort, todayISO } from "@/lib/month";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +70,7 @@ export default async function Home({
           orcamento={orcamento}
           saldo={projection.currentBalance}
           temMetas={orcamento.aporte > 0}
+          rendimentoAnual={projection.yieldAnnual}
         />
 
         <Card className="rise mt-6 p-5" style={{ animationDelay: "70ms" }}>
@@ -85,6 +86,13 @@ export default async function Home({
               : projection.variableSource === "historico"
                 ? `O gasto variável é a média dos seus últimos ${data.settings.lookbackMonths} meses, já descontando os fixos.`
                 : "Ainda sem histórico, então o gasto variável está zerado. A projeção está otimista."}
+            {projection.yieldAnnual > 0 ? (
+              <>
+                {" "}
+                O saldo rende {formatRate(projection.yieldAnnual)}, com juro
+                composto mês a mês.
+              </>
+            ) : null}
           </p>
         </Card>
       </div>
@@ -186,6 +194,7 @@ export default async function Home({
                 </div>
                 <span className="tnum text-[12px] text-ink-3">
                   {formatSigned(m.net)} no mês
+                  {m.yield > 0 ? `, com ${formatMoney(m.yield)} de rendimento` : ""}
                 </span>
               </div>
               <span

@@ -1,0 +1,14 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2 });
+await p.goto("http://localhost:3000/entrar", { waitUntil: "networkidle" });
+await p.locator('input[name="email"]').fill("demo@fin.app");
+await p.locator('input[name="senha"]').fill("demo1234");
+await p.getByRole("button", { name: "Entrar" }).click();
+await p.waitForURL("http://localhost:3000/");
+await p.waitForTimeout(1200);
+const t = (await p.locator("body").innerText()).replace(/ /g, " ");
+console.log("--- menções a rendimento na tela ---");
+for (const l of t.split("\n")) if (/rend|% a\.a\./i.test(l)) console.log("  " + l);
+await p.screenshot({ path: process.env.SHOTS_DIR + "/rendimento.png", fullPage: false });
+await b.close();

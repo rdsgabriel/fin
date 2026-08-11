@@ -9,6 +9,27 @@
   "background_color": "#faf8f6",
   "theme_color": "#faf8f6",
   "lang": "pt-BR",
+  "shortcuts": [
+    {
+      "name": "Lançar um gasto",
+      "short_name": "Lançar",
+      "description": "Abre direto no teclado de valor",
+      "url": "/lancamentos?novo=1",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Fixos e parcelas",
+      "short_name": "Fixos",
+      "url": "/fixos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Minhas metas",
+      "short_name": "Metas",
+      "url": "/ajustes",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",

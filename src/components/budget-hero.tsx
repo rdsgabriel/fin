@@ -1,4 +1,4 @@
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatRate } from "@/lib/money";
 import type { Orcamento } from "@/lib/projection";
 import { formatMonthLong, monthKeyOf, todayISO } from "@/lib/month";
 
@@ -11,10 +11,13 @@ export function BudgetHero({
   orcamento,
   saldo,
   temMetas,
+  rendimentoAnual,
 }: {
   orcamento: Orcamento;
   saldo: number;
   temMetas: boolean;
+  /** Taxa anual em decimal. 0 quando o dinheiro fica parado. */
+  rendimentoAnual: number;
 }) {
   const mes = formatMonthLong(monthKeyOf(todayISO())).split(" de ")[0];
   const estourou = orcamento.livre < 0;
@@ -62,6 +65,9 @@ export function BudgetHero({
 
       <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
         <Linha rotulo="Saldo hoje" valor={formatMoney(saldo)} />
+        {rendimentoAnual > 0 ? (
+          <Linha rotulo="Rendendo" valor={formatRate(rendimentoAnual)} destaque />
+        ) : null}
         {orcamento.aporte > 0 ? (
           <Linha
             rotulo="Guardando"

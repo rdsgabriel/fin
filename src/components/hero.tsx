@@ -22,7 +22,7 @@ export function Hero({
   variableMonthly,
   action,
 }: {
-  months: { month: MonthKey; endBalance: number }[];
+  months: { month: MonthKey; endBalance: number; yield: number }[];
   currentBalance: number;
   variableMonthly: number;
   /** Controle do horizonte, ao lado do rótulo do capítulo. */
@@ -72,6 +72,12 @@ export function Hero({
 
   const active = points[Math.min(index, points.length - 1)];
   const delta = active.value - currentBalance;
+
+  // Quanto do que a pessoa vê ali já é juro, e não dinheiro que ela pôs.
+  // Acompanha o arrasto: some só até o mês ativo.
+  const rendimentoAcumulado = months
+    .slice(0, index)
+    .reduce((soma, m) => soma + m.yield, 0);
   const hasNegative = points.some((p) => p.value < 0);
 
   const tone =
@@ -126,6 +132,15 @@ export function Hero({
           arraste a linha pra viajar no tempo
         </span>
       )}
+
+      {rendimentoAcumulado > 0 ? (
+        <p className="mt-2 text-[13px] text-ink-2">
+          <strong className="font-semibold text-ink">
+            {formatMoney(rendimentoAcumulado)}
+          </strong>{" "}
+          disso é rendimento, sem você fazer nada.
+        </p>
+      ) : null}
 
       <div
         ref={trackRef}

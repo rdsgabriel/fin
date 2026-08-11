@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Category } from "@/db/schema";
 import { AddRecurrenceSheet } from "./add-recurrence-sheet";
 import { AddTransactionSheet } from "./add-transaction-sheet";
@@ -27,6 +27,17 @@ export function Nav({
 }) {
   const pathname = usePathname();
   const [adding, setAdding] = useState(false);
+
+  /* Atalho do ícone ("Lançar um gasto") chega como ?novo=1. Lemos da URL
+     direto em vez de useSearchParams pra não forçar Suspense na árvore, e
+     limpamos o parâmetro depois pra um F5 não reabrir a folha. */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("novo") !== "1") return;
+    setAdding(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", url);
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);

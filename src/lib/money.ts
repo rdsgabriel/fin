@@ -20,6 +20,15 @@ export function formatMoneyCompact(cents: number): string {
   return BRL_COMPACT.format(cents / 100);
 }
 
+/** 0.105 -> "10,5% a.a." Corta o decimal quando é redondo. */
+export function formatRate(annual: number): string {
+  const pct = annual * 100;
+  const texto = Number.isInteger(pct)
+    ? String(pct)
+    : pct.toFixed(2).replace(/0$/, "").replace(".", ",");
+  return `${texto}% a.a.`;
+}
+
 /** Sempre com sinal explícito: "+R$ 500,00" / "−R$ 500,00" */
 export function formatSigned(cents: number): string {
   const sign = cents < 0 ? "−" : "+";

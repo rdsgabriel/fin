@@ -501,7 +501,7 @@ export function buildStory(
       month: m.mesAlcance,
       label: formatMonthShort(m.mesAlcance),
       title: `${m.goal.name} ✓`,
-      detail: `Você passa de ${money(m.goal.targetCents)} — a meta está batida.`,
+      detail: `Você passa de ${money(m.goal.targetCents)}. Meta batida.`,
       balance: m.goal.targetCents,
       tone: "pos",
     });
@@ -561,7 +561,7 @@ export function buildStory(
         month: hit.month,
         label: formatMonthShort(hit.month),
         title: "Reserva de 3 meses",
-        detail: `Você passa de ${money(monthlyCost * 3)} — o bastante pra viver 3 meses sem renda.`,
+        detail: `Você passa de ${money(monthlyCost * 3)}, o bastante pra viver 3 meses sem renda.`,
         balance: hit.endBalance,
         tone: "pos",
       });
